@@ -1,6 +1,5 @@
 package com.proyecto.servicios.model;
 
-import jakarta.persistence.Column;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -8,10 +7,9 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class PersonasRequest {
-
+public class ClienteResponse extends GenericResponse {
     private String nombre;
-    private String apellidoP;
+    private String apellidoPaterno;
     private String apellidoMaterno;
-
+    private String numeroCuentaAsignada;
 }

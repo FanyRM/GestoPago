@@ -9,5 +9,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class GenericResponse {
     private Integer codigo;
+    private String estatus;
     private String mensaje;
 }
