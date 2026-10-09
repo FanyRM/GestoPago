@@ -20,13 +20,13 @@ INSERT INTO catalogo_nacionalidad (descripcion, activo) VALUES
 ON CONFLICT DO NOTHING;
 
 -- Insertar Ocupaciones
-INSERT INTO catalogo_ocupacion (descripcion, activo) VALUES 
-('Estudiante', true),
-('Empleado', true),
-('Independiente', true),
-('Empresario', true),
-('Hogar', true),
-('Jubilado/Pensionado', true)
+INSERT INTO catalogo_ocupacion (nombre, descripcion) VALUES 
+('Estudiante', 'Estudiante'),
+('Empleado', 'Empleado'),
+('Independiente', 'Independiente'),
+('Empresario', 'Empresario'),
+('Hogar', 'Hogar'),
+('Jubilado/Pensionado', 'Jubilado/Pensionado')
 ON CONFLICT DO NOTHING;
 
 -- Insertar Países
