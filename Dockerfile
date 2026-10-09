@@ -8,6 +8,9 @@ COPY gradlew .
 COPY build.gradle .
 COPY settings.gradle .
 
+# Hacemos gradlew ejecutable para evitar problemas de permisos
+RUN chmod +x ./gradlew
+
 # Descargamos las dependencias de gradle
 RUN ./gradlew dependencies --no-daemon
 
