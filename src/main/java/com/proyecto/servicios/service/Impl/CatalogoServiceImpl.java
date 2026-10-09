@@ -46,9 +46,7 @@ public class CatalogoServiceImpl implements CatalogoService {
 
     @Override
     public List<CatalogoOcupacion> consultarOcupaciones() {
-        return ocupacionRepository.findAll().stream()
-                .filter(CatalogoOcupacion::getActivo)
-                .collect(Collectors.toList());
+        return ocupacionRepository.findAll();
     }
 
     @Override
