@@ -33,6 +33,11 @@ public class FlywayConfig {
                 .baselineOnMigrate(true)
                 .baselineVersion("0")
                 .load();
+        try {
+            flyway.repair();
+        } catch (Exception e) {
+            log.warn("Flyway repair arrojó una advertencia: {}", e.getMessage());
+        }
         flyway.migrate();
         return flyway;
     }
