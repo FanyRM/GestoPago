@@ -1,19 +1,22 @@
 package com.proyecto.servicios.model;
 
 import jakarta.validation.constraints.*;
-import lombok.Getter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import java.time.LocalDate;
-import java.math.BigDecimal;
 
-@Getter
-@Setter
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Data
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class ClienteRequest {
 
     // Datos Personales
-    @NotEmpty(message = "El nombre es obligatorio")
+    @NotBlank(message = "El nombre es obligatorio")
     @Size(min = 2, max = 50, message = "El nombre debe tener entre 2 y 50 caracteres")
     @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$", message = "El nombre solo debe contener letras y espacios")
     private String nombre;
@@ -22,12 +25,12 @@ public class ClienteRequest {
     @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]*$", message = "El segundo nombre solo debe contener letras y espacios")
     private String segundoNombre;
 
-    @NotEmpty(message = "El apellido paterno es obligatorio")
+    @NotBlank(message = "El apellido paterno es obligatorio")
     @Size(min = 2, max = 50, message = "El apellido paterno debe tener entre 2 y 50 caracteres")
     @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$", message = "El apellido paterno solo debe contener letras y espacios")
     private String apellidoPaterno;
 
-    @NotEmpty(message = "El apellido materno es obligatorio")
+    @NotBlank(message = "El apellido materno es obligatorio")
     @Size(min = 2, max = 50, message = "El apellido materno debe tener entre 2 y 50 caracteres")
     @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$", message = "El apellido materno solo debe contener letras y espacios")
     private String apellidoMaterno;
@@ -44,12 +47,12 @@ public class ClienteRequest {
     )
     private String password;
 
-    @NotEmpty(message = "La CURP es obligatoria")
+    @NotBlank(message = "La CURP es obligatoria")
     @Size(min = 18, max = 18, message = "La CURP debe contener 18 caracteres")
     @Pattern(regexp = "^[A-Z]{4}\\d{6}[HM][A-Z]{5}[A-Z\\d]\\d$", message = "Formato de CURP inválido")
     private String curp;
 
-    @NotEmpty(message = "El RFC es obligatorio")
+    @NotBlank(message = "El RFC es obligatorio")
     @Size(min = 12, max = 13, message = "El RFC debe contener 12 o 13 caracteres")
     @Pattern(regexp = "^[A-ZÑ&]{3,4}\\d{6}[A-Z\\d]{3}$", message = "Formato de RFC inválido")
     private String rfc;
@@ -65,8 +68,8 @@ public class ClienteRequest {
     @Positive(message = "El ID del estado civil debe ser un número positivo")
     private Integer idEstadoCivil;
 
-    // Datos de Contacto
-    @NotEmpty(message = "El correo electrónico es obligatorio")
+    // Contacto
+    @NotBlank(message = "El correo electrónico es obligatorio")
     @Email(message = "Debe tener un formato de correo electrónico válido")
     @Size(max = 100, message = "El correo electrónico debe tener máximo 100 caracteres")
     private String correoElectronico;
@@ -76,53 +79,56 @@ public class ClienteRequest {
     @Max(value = 999, message = "La lada móvil debe tener máximo 3 dígitos")
     private Integer ladaMovil;
 
-    @NotNull(message = "El teléfono móvil es obligatorio")
-    @Pattern(regexp = "^\\d{10}$", message = "El teléfono móvil debe contener exactamente  ́10 dígitos")
-    private Integer telefonoMovil;
+    @NotBlank(message = "El teléfono móvil es obligatorio")
+    @Pattern(regexp = "^\\d{10}$", message = "El teléfono móvil debe contener exactamente 10 dígitos")
+    private String telefonoMovil;
 
-    @Min(value = 100, message = "La lada alternativo debe tener al menos  ́3 dígitos si se proporciona")
-    @Max(value = 999, message = "La lada alternativo debe tener máximo  ́3 dígitos si se proporciona")
+    @Min(value = 100, message = "La lada alternativa debe tener al menos 3 dígitos si se proporciona")
+    @Max(value = 999, message = "La lada alternativa debe tener máximo 3 dígitos si se proporciona")
     private Integer ladaAlternativo;
 
-    @Pattern(regexp = "^(\\d{10})?$", message = "El teléfono alternativo debe contener exactamente  ́10 dígitos si se proporciona")
-    private Integer telefonoAlternativo;
+    @Pattern(regexp = "^(\\d{10})?$", message = "El teléfono alternativo debe contener exactamente 10 dígitos si se proporciona")
+    private String telefonoAlternativo;
 
-
-
-    // Información laboral
+    // Información Laboral
     @NotNull(message = "El ID de la ocupación es obligatorio")
     @Positive(message = "El ID de la ocupación debe ser un número positivo")
     private Integer idOcupacion;
 
-    @Size(max = 100, message = "La empresa debe tener máximo  ́100 caracteres")
+    @Size(max = 100, message = "La empresa debe tener máximo 100 caracteres")
     private String empresa;
 
     @NotNull(message = "El ingreso mensual es obligatorio")
     @DecimalMin(value = "0.01", message = "El ingreso mensual debe ser mayor a cero")
-    @Digits(integer = 10, fraction = 2, message = "El ingreso mensual debe tener máximo  ́10 enteros y 2 decimales")
+    @Digits(integer = 10, fraction = 2, message = "El ingreso mensual debe tener máximo 10 enteros y 2 decimales")
     private BigDecimal ingresoMensual;
 
     // Domicilio
-    @Size(max = 100, message = "La calle debe tener máximo  ́100 caracteres")
+    @NotBlank(message = "La calle es obligatoria")
+    @Size(max = 100, message = "La calle debe tener máximo 100 caracteres")
     private String calle;
 
-    @Size(max = 10, message = "El número exterior debe tener máximo  ́10 caracteres")
+    @NotBlank(message = "El número exterior es obligatorio")
+    @Size(max = 10, message = "El número exterior debe tener máximo 10 caracteres")
     private String numeroExterior;
 
-    @Size(max = 10, message = "El número interior debe tener máximo  ́10 caracteres")
+    @Size(max = 10, message = "El número interior debe tener máximo 10 caracteres")
     private String numeroInterior;
 
-    @Size(max = 100, message = "La colonia debe tener máximo  ́100 caracteres")
+    @NotBlank(message = "La colonia es obligatoria")
+    @Size(max = 100, message = "La colonia debe tener máximo 100 caracteres")
     private String colonia;
 
-    @Size(max = 100, message = "El municipio debe tener máximo  ́100 caracteres")
+    @NotBlank(message = "El municipio es obligatorio")
+    @Size(max = 100, message = "El municipio debe tener máximo 100 caracteres")
     private String municipio;
 
-    @Size(max = 100, message = "El estado debe tener máximo  ́100 caracteres")
+    @NotBlank(message = "El estado es obligatorio")
+    @Size(max = 100, message = "El estado debe tener máximo 100 caracteres")
     private String estado;
 
-    @NotNull(message = "El código postal es obligatorio")
-    @Pattern(regexp = "^\\d{5}$", message = "El código postal debe contener exactamente  ́5 dígitos")
+    @NotBlank(message = "El código postal es obligatorio")
+    @Pattern(regexp = "^\\d{5}$", message = "El código postal debe contener exactamente 5 dígitos")
     private String codigoPostal;
 
     @NotNull(message = "El ID del país es obligatorio")
@@ -131,9 +137,11 @@ public class ClienteRequest {
 
     @AssertTrue(message = "El cliente debe ser mayor de edad (18 años o más)")
     public boolean esMayorDeEdad() {
-        if (fechaNacimiento == null) return false;
+        if (fechaNacimiento == null) {
+            return false;
+        }
         return fechaNacimiento.plusYears(18).isBefore(LocalDate.now())
-            || fechaNacimiento.plusYears(18).isEqual(LocalDate.now());
+                || fechaNacimiento.plusYears(18).isEqual(LocalDate.now());
     }
 
     @AssertTrue(message = "El sexo debe ser 'H' (Hombre), 'M' (Mujer) o 'O' (Otro)")

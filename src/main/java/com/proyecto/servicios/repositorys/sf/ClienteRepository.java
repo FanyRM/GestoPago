@@ -2,18 +2,19 @@ package com.proyecto.servicios.repositorys.sf;
 
 import com.proyecto.servicios.entity.sf.Cliente;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
+
 import java.util.Optional;
-import java.util.List;
 
 @Repository
-public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
-    Optional<Cliente> findByNombre(String nombre);
+public interface ClienteRepository extends JpaRepository<Cliente, Integer>, JpaSpecificationExecutor<Cliente> {
+
     Optional<Cliente> findByCurp(String curp);
+
     Optional<Cliente> findByRfc(String rfc);
-    Optional<Cliente> findByCorreoElectronico(String correo);
-    
-    List<Cliente> findByNombreContainingIgnoreCase(String nombre);
-    List<Cliente> findByApellidoPaternoContainingIgnoreCase(String apellidoPaterno);
-    List<Cliente> findByApellidoMaternoContainingIgnoreCase(String apellidoMaterno);
+
+    Optional<Cliente> findByCorreoElectronico(String correoElectronico);
+
+    Optional<Cliente> findByRfcAndCurp(String rfc, String curp);
 }

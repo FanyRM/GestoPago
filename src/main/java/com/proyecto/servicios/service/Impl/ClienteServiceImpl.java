@@ -6,86 +6,68 @@ import com.proyecto.servicios.entity.catalogo.CatalogoOcupacion;
 import com.proyecto.servicios.entity.sf.Cliente;
 import com.proyecto.servicios.entity.sf.Cuenta;
 import com.proyecto.servicios.entity.sf.Domicilio;
+import com.proyecto.servicios.enums.EstatusCuenta;
+import com.proyecto.servicios.exception.*;
+import com.proyecto.servicios.model.ClienteActualizaRequest;
+import com.proyecto.servicios.model.ClienteConsultaRequest;
 import com.proyecto.servicios.model.ClienteRequest;
 import com.proyecto.servicios.model.ClienteResponse;
-import com.proyecto.servicios.model.GenericResponse;
 import com.proyecto.servicios.repositorys.catalogo.CatalogoEstadoCivilRepository;
 import com.proyecto.servicios.repositorys.catalogo.CatalogoNacionalidadRepository;
 import com.proyecto.servicios.repositorys.catalogo.CatalogoOcupacionRepository;
 import com.proyecto.servicios.repositorys.sf.ClienteRepository;
 import com.proyecto.servicios.repositorys.sf.CuentaRepository;
-import com.proyecto.servicios.service.ClienteService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.proyecto.servicios.service.IClienteService;
+import jakarta.persistence.criteria.Predicate;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.Period;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
-public class ClienteServiceImpl implements ClienteService {
+@RequiredArgsConstructor
+public class ClienteServiceImpl implements IClienteService {
 
-    @Autowired
-    private ClienteRepository clienteRepository;
-
-    @Autowired
-    private CuentaRepository cuentaRepository;
-
-    @Autowired
-    private CatalogoNacionalidadRepository nacionalidadRepository;
-
-    @Autowired
-    private CatalogoEstadoCivilRepository estadoCivilRepository;
-
-    @Autowired
-    private CatalogoOcupacionRepository ocupacionRepository;
+    private final ClienteRepository clienteRepository;
+    private final CuentaRepository cuentaRepository;
+    private final CatalogoNacionalidadRepository nacionalidadRepository;
+    private final CatalogoEstadoCivilRepository estadoCivilRepository;
+    private final CatalogoOcupacionRepository ocupacionRepository;
 
     @Override
     @Transactional
-    public ClienteResponse creaCliente(ClienteRequest request) {
-        ClienteResponse response = new ClienteResponse();
-
-        // Regla: Mayor de edad
-        if (Period.between(request.getFechaNacimiento(), LocalDate.now()).getYears() < 18) {
-            response.setEstatus("ERROR");
-            response.setMensaje("El cliente debe ser mayor de edad (18 años o más).");
-            return response;
-        }
-
-        // Reglas: Unicidad
+    public ClienteResponse registrarCliente(ClienteRequest request) {
         if (clienteRepository.findByCurp(request.getCurp()).isPresent()) {
-            response.setEstatus("ERROR");
-            response.setMensaje("Ya existe un cliente con la misma CURP.");
-            return response;
+            throw new CurpDuplicadaException("Ya existe un cliente registrado con la misma CURP: " + request.getCurp());
         }
         if (clienteRepository.findByRfc(request.getRfc()).isPresent()) {
-            response.setEstatus("ERROR");
-            response.setMensaje("Ya existe un cliente con el mismo RFC.");
-            return response;
+            throw new RfcDuplicadoException("Ya existe un cliente registrado con el mismo RFC: " + request.getRfc());
         }
         if (clienteRepository.findByCorreoElectronico(request.getCorreoElectronico()).isPresent()) {
-            response.setEstatus("ERROR");
-            response.setMensaje("Ya existe un cliente con el mismo correo electrónico.");
-            return response;
+            throw new CorreoDuplicadoException("Ya existe un cliente registrado con el mismo correo electrónico: " + request.getCorreoElectronico());
         }
 
         Cliente cliente = new Cliente();
-        mapRequestToCliente(request, cliente);
+        mapearDatosPrincipales(request, cliente);
         cliente.setActivo(true);
 
-        // Cuenta automática
         Cuenta cuenta = new Cuenta();
-        cuenta.setNumeroCuenta(generarNumeroCuenta());
+        cuenta.setNumeroCuenta(generarNumeroCuentaUnico());
         cuenta.setSaldo(BigDecimal.ZERO);
-        cuenta.setEstatus(com.proyecto.servicios.enums.EstatusCuenta.ACTIVA);
+        cuenta.setEstatus(EstatusCuenta.ACTIVA);
         cuenta.setCliente(cliente);
         cliente.setCuenta(cuenta);
 
-        // Domicilio
         Domicilio domicilio = new Domicilio();
         domicilio.setCalle(request.getCalle());
         domicilio.setNumeroExterior(request.getNumeroExterior());
@@ -97,184 +79,230 @@ public class ClienteServiceImpl implements ClienteService {
         domicilio.setCliente(cliente);
         cliente.setDomicilio(domicilio);
 
-        cliente = clienteRepository.save(cliente);
-
-        response.setEstatus("EXITO");
-        response.setMensaje("Cliente creado exitosamente");
-        response.setNombre(cliente.getNombre());
-        response.setApellidoPaterno(cliente.getApellidoPaterno());
-        response.setApellidoMaterno(cliente.getApellidoMaterno());
-        response.setNumeroCuentaAsignada(cliente.getCuenta().getNumeroCuenta());
-
-        return response;
+        Cliente guardado = clienteRepository.save(cliente);
+        return mapearAResponse(guardado);
     }
 
     @Override
-    public List<ClienteResponse> consultarTodos() {
-        return clienteRepository.findAll().stream().map(this::mapToResponse).collect(Collectors.toList());
-    }
+    @Transactional(readOnly = true)
+    public Page<ClienteResponse> consultarClientes(ClienteConsultaRequest request) {
+        ClienteConsultaRequest filtro = request != null ? request : new ClienteConsultaRequest();
 
-    @Override
-    public ClienteResponse consultarPorId(Integer id) {
-        return clienteRepository.findById(id).map(this::mapToResponse).orElseGet(() -> {
-            ClienteResponse error = new ClienteResponse();
-            error.setEstatus("ERROR");
-            error.setMensaje("Cliente no encontrado");
-            return error;
-        });
-    }
+        // Si se busca explícitamente por ID y no existe en la BD, lanzar excepción específica de negocio (404)
+        if (filtro.getId() != null && !clienteRepository.existsById(filtro.getId())) {
+            throw new ClienteNoEncontradoException("Cliente no encontrado con ID: " + filtro.getId());
+        }
 
-    @Override
-    public ClienteResponse consultarPorCurp(String curp) {
-        return clienteRepository.findByCurp(curp).map(this::mapToResponse).orElseGet(() -> {
-            ClienteResponse error = new ClienteResponse();
-            error.setEstatus("ERROR");
-            error.setMensaje("Cliente no encontrado");
-            return error;
-        });
-    }
+        int pagina = filtro.getPagina() != null ? Math.max(filtro.getPagina(), 0) : 0;
+        int tamano = filtro.getTamano() != null ? Math.min(Math.max(filtro.getTamano(), 1), 100) : 10;
+        Pageable pageable = PageRequest.of(pagina, tamano, Sort.by("id").descending());
 
-    @Override
-    public ClienteResponse consultarPorRfc(String rfc) {
-        return clienteRepository.findByRfc(rfc).map(this::mapToResponse).orElseGet(() -> {
-            ClienteResponse error = new ClienteResponse();
-            error.setEstatus("ERROR");
-            error.setMensaje("Cliente no encontrado");
-            return error;
-        });
-    }
+        Specification<Cliente> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
 
-    @Override
-    public ClienteResponse consultarPorCuenta(String numeroCuenta) {
-        return cuentaRepository.findByNumeroCuenta(numeroCuenta).map(c -> mapToResponse(c.getCliente())).orElseGet(() -> {
-            ClienteResponse error = new ClienteResponse();
-            error.setEstatus("ERROR");
-            error.setMensaje("Cuenta no encontrada");
-            return error;
-        });
+            Optional.ofNullable(filtro.getId())
+                    .ifPresent(val -> predicates.add(cb.equal(root.get("id"), val)));
+
+            Optional.ofNullable(filtro.getCurp())
+                    .filter(val -> !val.trim().isEmpty())
+                    .ifPresent(val -> predicates.add(cb.equal(cb.upper(root.get("curp")), val.trim().toUpperCase())));
+
+            Optional.ofNullable(filtro.getRfc())
+                    .filter(val -> !val.trim().isEmpty())
+                    .ifPresent(val -> predicates.add(cb.equal(cb.upper(root.get("rfc")), val.trim().toUpperCase())));
+
+            Optional.ofNullable(filtro.getCorreoElectronico())
+                    .filter(val -> !val.trim().isEmpty())
+                    .ifPresent(val -> predicates.add(cb.equal(cb.lower(root.get("correoElectronico")), val.trim().toLowerCase())));
+
+            Optional.ofNullable(filtro.getNombre())
+                    .filter(val -> !val.trim().isEmpty())
+                    .ifPresent(val -> predicates.add(cb.like(cb.lower(root.get("nombre")), "%" + val.trim().toLowerCase() + "%")));
+
+            Optional.ofNullable(filtro.getApellidoPaterno())
+                    .filter(val -> !val.trim().isEmpty())
+                    .ifPresent(val -> predicates.add(cb.like(cb.lower(root.get("apellidoPaterno")), "%" + val.trim().toLowerCase() + "%")));
+
+            Optional.ofNullable(filtro.getApellidoMaterno())
+                    .filter(val -> !val.trim().isEmpty())
+                    .ifPresent(val -> predicates.add(cb.like(cb.lower(root.get("apellidoMaterno")), "%" + val.trim().toLowerCase() + "%")));
+
+            Optional.ofNullable(filtro.getActivo())
+                    .ifPresent(val -> predicates.add(cb.equal(root.get("activo"), val)));
+
+            Optional.ofNullable(filtro.getNumeroCuenta())
+                    .filter(val -> !val.trim().isEmpty())
+                    .ifPresent(val -> predicates.add(cb.equal(cb.upper(root.join("cuenta").get("numeroCuenta")), val.trim().toUpperCase())));
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return clienteRepository.findAll(spec, pageable).map(this::mapearAResponse);
     }
 
     @Override
     @Transactional
-    public GenericResponse actualizaCliente(Integer id, ClienteRequest request) {
-        GenericResponse response = new GenericResponse();
-        Cliente cliente = clienteRepository.findById(id).orElse(null);
-        if (cliente == null) {
-            response.setEstatus("ERROR");
-            response.setMensaje("Cliente no encontrado");
-            return response;
+    public ClienteResponse actualizarCliente(ClienteActualizaRequest request) {
+        Cliente cliente = clienteRepository.findById(request.getId())
+                .orElseThrow(() -> new ClienteNoEncontradoException("No se puede actualizar. Cliente no encontrado con ID: " + request.getId()));
+
+        if (request.getCorreoElectronico() != null && !request.getCorreoElectronico().trim().isEmpty()) {
+            String nuevoCorreo = request.getCorreoElectronico().trim();
+            if (!nuevoCorreo.equalsIgnoreCase(cliente.getCorreoElectronico())) {
+                clienteRepository.findByCorreoElectronico(nuevoCorreo).ifPresent(c -> {
+                    throw new CorreoDuplicadoException("Ya existe otro cliente con el correo electrónico: " + nuevoCorreo);
+                });
+                cliente.setCorreoElectronico(nuevoCorreo);
+            }
         }
 
-        // Se permite actualizar Datos Personales (excepto CURP y RFC), Datos de Contacto, Domicilio, Información Laboral.
-        cliente.setNombre(request.getNombre());
-        cliente.setSegundoNombre(request.getSegundoNombre());
-        cliente.setApellidoPaterno(request.getApellidoPaterno());
-        cliente.setApellidoMaterno(request.getApellidoMaterno());
-        cliente.setFechaNacimiento(request.getFechaNacimiento());
-        
-        if (!cliente.getCorreoElectronico().equals(request.getCorreoElectronico()) &&
-            clienteRepository.findByCorreoElectronico(request.getCorreoElectronico()).isPresent()) {
-            response.setEstatus("ERROR");
-            response.setMensaje("Ya existe otro cliente con el mismo correo electrónico.");
-            return response;
-        }
+        // Actualiza únicamente campos permitidos. Campos controlados por el servidor (CURP, RFC, Cuenta, Saldo) NO se modifican.
+        actualizarCamposNoNulos(request, cliente);
 
-        cliente.setCorreoElectronico(request.getCorreoElectronico());
-        cliente.setLadaMovil(request.getLadaMovil());
-        cliente.setTelefonoMovil(request.getTelefonoMovil());
-        cliente.setLadaAlternativo(request.getLadaAlternativo());
-        cliente.setTelefonoAlternativo(request.getTelefonoAlternativo());
-        cliente.setEmpresa(request.getEmpresa());
-        cliente.setIngresoMensual(request.getIngresoMensual());
-        cliente.setSexo(request.getSexo());
-
-        setCatalogos(request, cliente);
-
-        if (cliente.getDomicilio() != null) {
-            cliente.getDomicilio().setCalle(request.getCalle());
-            cliente.getDomicilio().setNumeroExterior(request.getNumeroExterior());
-            cliente.getDomicilio().setNumeroInterior(request.getNumeroInterior());
-            cliente.getDomicilio().setColonia(request.getColonia());
-            cliente.getDomicilio().setMunicipio(request.getMunicipio());
-            cliente.getDomicilio().setEstado(request.getEstado());
-            cliente.getDomicilio().setCodigoPostal(request.getCodigoPostal());
-        }
-
-        clienteRepository.save(cliente);
-
-        response.setEstatus("EXITO");
-        response.setMensaje("Cliente actualizado correctamente");
-        return response;
+        Cliente actualizado = clienteRepository.save(cliente);
+        return mapearAResponse(actualizado);
     }
 
     @Override
     @Transactional
-    public GenericResponse desactivarCliente(Integer id) {
-        GenericResponse response = new GenericResponse();
-        Cliente cliente = clienteRepository.findById(id).orElse(null);
-        if (cliente == null) {
-            response.setEstatus("ERROR");
-            response.setMensaje("Cliente no encontrado");
-            return response;
-        }
+    public void desactivarCliente(Integer id) {
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new ClienteNoEncontradoException("No se puede desactivar. Cliente no encontrado con ID: " + id));
+
         cliente.setActivo(false);
         if (cliente.getCuenta() != null) {
-            cliente.getCuenta().setEstatus(com.proyecto.servicios.enums.EstatusCuenta.INACTIVA);
+            cliente.getCuenta().setEstatus(EstatusCuenta.INACTIVA);
         }
         clienteRepository.save(cliente);
-        response.setEstatus("EXITO");
-        response.setMensaje("Cliente desactivado correctamente (borrado lógico)");
-        return response;
     }
 
-    private void mapRequestToCliente(ClienteRequest request, Cliente cliente) {
-        cliente.setNombre(request.getNombre());
-        cliente.setSegundoNombre(request.getSegundoNombre());
-        cliente.setApellidoPaterno(request.getApellidoPaterno());
-        cliente.setApellidoMaterno(request.getApellidoMaterno());
-        cliente.setFechaNacimiento(request.getFechaNacimiento());
-        cliente.setCurp(request.getCurp());
-        cliente.setRfc(request.getRfc());
-        cliente.setCorreoElectronico(request.getCorreoElectronico());
-        cliente.setLadaMovil(request.getLadaMovil());
-        cliente.setTelefonoMovil(request.getTelefonoMovil());
-        cliente.setLadaAlternativo(request.getLadaAlternativo());
-        cliente.setTelefonoAlternativo(request.getTelefonoAlternativo());
-        cliente.setEmpresa(request.getEmpresa());
-        cliente.setIngresoMensual(request.getIngresoMensual());
-        cliente.setSexo(request.getSexo());
-        setCatalogos(request, cliente);
-    }
+    private void actualizarCamposNoNulos(ClienteActualizaRequest req, Cliente cliente) {
+        Optional.ofNullable(req.getNombre()).filter(v -> !v.trim().isEmpty()).ifPresent(cliente::setNombre);
+        Optional.ofNullable(req.getSegundoNombre()).filter(v -> !v.trim().isEmpty()).ifPresent(cliente::setSegundoNombre);
+        Optional.ofNullable(req.getApellidoPaterno()).filter(v -> !v.trim().isEmpty()).ifPresent(cliente::setApellidoPaterno);
+        Optional.ofNullable(req.getApellidoMaterno()).filter(v -> !v.trim().isEmpty()).ifPresent(cliente::setApellidoMaterno);
+        Optional.ofNullable(req.getFechaNacimiento()).ifPresent(cliente::setFechaNacimiento);
+        Optional.ofNullable(req.getSexo()).ifPresent(cliente::setSexo);
+        Optional.ofNullable(req.getLadaMovil()).ifPresent(cliente::setLadaMovil);
+        Optional.ofNullable(req.getTelefonoMovil()).filter(v -> !v.trim().isEmpty()).ifPresent(v -> cliente.setTelefonoMovil(Integer.valueOf(v)));
+        Optional.ofNullable(req.getLadaAlternativo()).ifPresent(cliente::setLadaAlternativo);
+        Optional.ofNullable(req.getTelefonoAlternativo()).filter(v -> !v.trim().isEmpty()).ifPresent(v -> cliente.setTelefonoAlternativo(Integer.valueOf(v)));
+        Optional.ofNullable(req.getEmpresa()).filter(v -> !v.trim().isEmpty()).ifPresent(cliente::setEmpresa);
+        Optional.ofNullable(req.getIngresoMensual()).ifPresent(cliente::setIngresoMensual);
 
-    private void setCatalogos(ClienteRequest request, Cliente cliente) {
-        if (request.getIdNacionalidad() != null) {
-            CatalogoNacionalidad nac = nacionalidadRepository.findById(request.getIdNacionalidad()).orElse(null);
+        if (req.getIdNacionalidad() != null) {
+            CatalogoNacionalidad nac = nacionalidadRepository.findById(req.getIdNacionalidad())
+                    .orElseThrow(() -> new ClienteNegocioException("La nacionalidad especificada no existe con ID: " + req.getIdNacionalidad()));
             cliente.setNacionalidad(nac);
         }
-        if (request.getIdEstadoCivil() != null) {
-            CatalogoEstadoCivil edo = estadoCivilRepository.findById(request.getIdEstadoCivil()).orElse(null);
+        if (req.getIdEstadoCivil() != null) {
+            CatalogoEstadoCivil edo = estadoCivilRepository.findById(req.getIdEstadoCivil())
+                    .orElseThrow(() -> new ClienteNegocioException("El estado civil especificado no existe con ID: " + req.getIdEstadoCivil()));
             cliente.setEstadoCivil(edo);
         }
-        if (request.getIdOcupacion() != null) {
-            CatalogoOcupacion ocup = ocupacionRepository.findById(request.getIdOcupacion()).orElse(null);
+        if (req.getIdOcupacion() != null) {
+            CatalogoOcupacion ocup = ocupacionRepository.findById(req.getIdOcupacion())
+                    .orElseThrow(() -> new ClienteNegocioException("La ocupación especificada no existe con ID: " + req.getIdOcupacion()));
             cliente.setOcupacion(ocup);
         }
-    }
 
-    private String generarNumeroCuenta() {
-        return UUID.randomUUID().toString().replaceAll("-", "").substring(0, 10).toUpperCase();
-    }
-
-    private ClienteResponse mapToResponse(Cliente c) {
-        ClienteResponse cr = new ClienteResponse();
-        cr.setEstatus("EXITO");
-        cr.setMensaje("Consulta exitosa");
-        cr.setNombre(c.getNombre());
-        cr.setApellidoPaterno(c.getApellidoPaterno());
-        cr.setApellidoMaterno(c.getApellidoMaterno());
-        if (c.getCuenta() != null) {
-            cr.setNumeroCuentaAsignada(c.getCuenta().getNumeroCuenta());
+        if (cliente.getDomicilio() != null) {
+            Domicilio d = cliente.getDomicilio();
+            Optional.ofNullable(req.getCalle()).filter(v -> !v.trim().isEmpty()).ifPresent(d::setCalle);
+            Optional.ofNullable(req.getNumeroExterior()).filter(v -> !v.trim().isEmpty()).ifPresent(d::setNumeroExterior);
+            Optional.ofNullable(req.getNumeroInterior()).filter(v -> !v.trim().isEmpty()).ifPresent(d::setNumeroInterior);
+            Optional.ofNullable(req.getColonia()).filter(v -> !v.trim().isEmpty()).ifPresent(d::setColonia);
+            Optional.ofNullable(req.getMunicipio()).filter(v -> !v.trim().isEmpty()).ifPresent(d::setMunicipio);
+            Optional.ofNullable(req.getEstado()).filter(v -> !v.trim().isEmpty()).ifPresent(d::setEstado);
+            Optional.ofNullable(req.getCodigoPostal()).filter(v -> !v.trim().isEmpty()).ifPresent(d::setCodigoPostal);
         }
-        return cr;
+    }
+
+    private void mapearDatosPrincipales(ClienteRequest req, Cliente cliente) {
+        cliente.setNombre(req.getNombre());
+        cliente.setSegundoNombre(req.getSegundoNombre());
+        cliente.setApellidoPaterno(req.getApellidoPaterno());
+        cliente.setApellidoMaterno(req.getApellidoMaterno());
+        cliente.setFechaNacimiento(req.getFechaNacimiento());
+        cliente.setCurp(req.getCurp().trim().toUpperCase());
+        cliente.setRfc(req.getRfc().trim().toUpperCase());
+        cliente.setSexo(req.getSexo());
+        cliente.setCorreoElectronico(req.getCorreoElectronico().trim());
+        cliente.setLadaMovil(req.getLadaMovil());
+        cliente.setTelefonoMovil(Integer.valueOf(req.getTelefonoMovil()));
+        cliente.setLadaAlternativo(req.getLadaAlternativo());
+        if (req.getTelefonoAlternativo() != null && !req.getTelefonoAlternativo().trim().isEmpty()) {
+            cliente.setTelefonoAlternativo(Integer.valueOf(req.getTelefonoAlternativo()));
+        }
+        cliente.setEmpresa(req.getEmpresa());
+        cliente.setIngresoMensual(req.getIngresoMensual());
+
+        CatalogoNacionalidad nac = nacionalidadRepository.findById(req.getIdNacionalidad())
+                .orElseThrow(() -> new ClienteNegocioException("Nacionalidad no encontrada: " + req.getIdNacionalidad()));
+        cliente.setNacionalidad(nac);
+
+        CatalogoEstadoCivil edo = estadoCivilRepository.findById(req.getIdEstadoCivil())
+                .orElseThrow(() -> new ClienteNegocioException("Estado civil no encontrado: " + req.getIdEstadoCivil()));
+        cliente.setEstadoCivil(edo);
+
+        CatalogoOcupacion ocup = ocupacionRepository.findById(req.getIdOcupacion())
+                .orElseThrow(() -> new ClienteNegocioException("Ocupación no encontrada: " + req.getIdOcupacion()));
+        cliente.setOcupacion(ocup);
+    }
+
+    private String generarNumeroCuentaUnico() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
+    }
+
+    private ClienteResponse mapearAResponse(Cliente c) {
+        ClienteResponse resp = ClienteResponse.builder()
+                .id(c.getId())
+                .nombre(c.getNombre())
+                .segundoNombre(c.getSegundoNombre())
+                .apellidoPaterno(c.getApellidoPaterno())
+                .apellidoMaterno(c.getApellidoMaterno())
+                .fechaNacimiento(c.getFechaNacimiento())
+                .curp(c.getCurp())
+                .rfc(c.getRfc())
+                .sexo(c.getSexo())
+                .correoElectronico(c.getCorreoElectronico())
+                .ladaMovil(c.getLadaMovil())
+                .telefonoMovil(c.getTelefonoMovil())
+                .ladaAlternativo(c.getLadaAlternativo())
+                .telefonoAlternativo(c.getTelefonoAlternativo())
+                .empresa(c.getEmpresa())
+                .ingresoMensual(c.getIngresoMensual())
+                .activo(c.getActivo())
+                .build();
+
+        if (c.getCuenta() != null) {
+            resp.setNumeroCuentaAsignada(c.getCuenta().getNumeroCuenta());
+        }
+
+        if (c.getDomicilio() != null) {
+            Domicilio d = c.getDomicilio();
+            resp.setCalle(d.getCalle());
+            resp.setNumeroExterior(d.getNumeroExterior());
+            resp.setNumeroInterior(d.getNumeroInterior());
+            resp.setColonia(d.getColonia());
+            resp.setMunicipio(d.getMunicipio());
+            resp.setEstado(d.getEstado());
+            resp.setCodigoPostal(d.getCodigoPostal());
+            if (d.getPais() != null) {
+                resp.setIdPais(d.getPais().getId());
+            }
+        }
+
+        if (c.getNacionalidad() != null) {
+            resp.setIdNacionalidad(c.getNacionalidad().getId());
+        }
+        if (c.getEstadoCivil() != null) {
+            resp.setIdEstadoCivil(c.getEstadoCivil().getId());
+        }
+        if (c.getOcupacion() != null) {
+            resp.setIdOcupacion(c.getOcupacion().getId());
+        }
+
+        return resp;
     }
 }

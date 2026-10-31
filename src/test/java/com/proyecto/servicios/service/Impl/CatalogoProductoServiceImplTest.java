@@ -6,7 +6,7 @@ import com.proyecto.servicios.enums.ApiResponseEnum;
 import com.proyecto.servicios.exception.CatalogoException;
 import com.proyecto.servicios.model.gestopago.catalogo.CatalogoCacheDto;
 import com.proyecto.servicios.model.gestopago.catalogo.CatalogoProductoResponse;
-import com.proyecto.servicios.model.gestopago.catalogo.ProductoDto;
+import com.proyecto.servicios.model.gestopago.catalogo.ProductoXml;
 import com.proyecto.servicios.repositorys.mongo.CatalogoProductoRepository;
 import com.proyecto.servicios.service.GestoPagoTokenService;
 import feign.FeignException;
@@ -65,26 +65,12 @@ class CatalogoProductoServiceImplTest {
     // -------------------------------------------------------------------------
     private static final String XML_VALIDO = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <productos>
-                <producto>
-                    <sku>PROD-001</sku>
-                    <nombre>Recarga Telcel 50</nombre>
-                    <descripcion>Recarga de tiempo aire Telcel $50</descripcion>
-                    <precio>50.00</precio>
-                    <categoria>Recargas</categoria>
-                    <activo>true</activo>
-                    <proveedor>Telcel</proveedor>
-                </producto>
-                <producto>
-                    <sku>PROD-002</sku>
-                    <nombre>Recarga Movistar 100</nombre>
-                    <descripcion>Recarga de tiempo aire Movistar $100</descripcion>
-                    <precio>100.00</precio>
-                    <categoria>Recargas</categoria>
-                    <activo>true</activo>
-                    <proveedor>Movistar</proveedor>
-                </producto>
-            </productos>
+            <RESPONSE>
+                <PRODUCTOS>
+                    <producto idProducto="PROD-001" producto="Recarga Telcel 50" precio="50.00" />
+                    <producto idProducto="PROD-002" producto="Recarga Movistar 100" precio="100.00" />
+                </PRODUCTOS>
+            </RESPONSE>
             """;
 
     @BeforeEach
@@ -194,9 +180,9 @@ class CatalogoProductoServiceImplTest {
     @DisplayName("Consulta exitosa: MongoDB tiene datos y devuelve respuesta 200")
     void obtenerCatalogo_cuandoExisteDatosEnMongo_debeRetornarRespuesta200() {
         // Arrange
-        ProductoDto prod1 = new ProductoDto();
-        prod1.setSku("PROD-001");
-        prod1.setNombre("Recarga Telcel 50");
+        ProductoXml prod1 = new ProductoXml();
+        prod1.setIdProducto("PROD-001");
+        prod1.setNombreProducto("Recarga Telcel 50");
 
         CatalogoCacheDto cacheDto = new CatalogoCacheDto();
         cacheDto.setProductos(List.of(prod1));
@@ -213,7 +199,7 @@ class CatalogoProductoServiceImplTest {
         assertThat(respuesta).isNotNull();
         assertThat(respuesta.getCodigo()).isEqualTo(200);
         assertThat(respuesta.getProductos()).hasSize(1);
-        assertThat(respuesta.getProductos().get(0).getSku()).isEqualTo("PROD-001");
+        assertThat(respuesta.getProductos().get(0).getIdProducto()).isEqualTo("PROD-001");
         assertThat(respuesta.getTotalProductos()).isEqualTo(1);
     }
 

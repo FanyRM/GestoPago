@@ -1,0 +1,436 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+		"name": "GestoPago - Pruebas de Endpoints (PR-01 a PR-15)",
+		"description": "Colección completa con los 15 casos de prueba especificados para la validación funcional y de negocio.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "00 - Prerrequisitos (Catálogos)",
+			"item": [
+				{
+					"name": "00.1 - Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/actuator/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "00.2 - Consultar Estados Civiles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/catalogos/estado-civil",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "catalogos", "estado-civil"]
+						}
+					}
+				},
+				{
+					"name": "00.3 - Consultar Nacionalidades",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/catalogos/nacionalidad",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "catalogos", "nacionalidad"]
+						}
+					}
+				},
+				{
+					"name": "00.4 - Consultar Ocupaciones",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/catalogos/ocupacion",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "catalogos", "ocupacion"]
+						}
+					}
+				},
+				{
+					"name": "00.5 - Consultar Países",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/catalogos/pais",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "catalogos", "pais"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "PR-01: Registrar cliente válido",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var jsonData = pm.response.json();",
+							"if (jsonData.numeroCuentaAsignada) {",
+							"    pm.environment.set(\"numeroCuenta\", jsonData.numeroCuentaAsignada);",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Alejandro\",\n  \"segundoNombre\": \"Manuel\",\n  \"apellidoPaterno\": \"García\",\n  \"apellidoMaterno\": \"Ríos\",\n  \"fechaNacimiento\": \"1992-06-15\",\n  \"password\": \"Segura123#\",\n  \"curp\": \"GARM920615HMCRSN01\",\n  \"rfc\": \"GARM920615AB1\",\n  \"sexo\": \"H\",\n  \"idNacionalidad\": 1,\n  \"idEstadoCivil\": 1,\n  \"correoElectronico\": \"alejandro.garcia@testmail.com\",\n  \"ladaMovil\": 521,\n  \"telefonoMovil\": 1234567890,\n  \"idOcupacion\": 2,\n  \"empresa\": \"Empresa SA de CV\",\n  \"ingresoMensual\": 35000.00,\n  \"calle\": \"Av. Insurgentes\",\n  \"numeroExterior\": \"450\",\n  \"numeroInterior\": \"3A\",\n  \"colonia\": \"Roma Sur\",\n  \"municipio\": \"Cuauhtémoc\",\n  \"estado\": \"Ciudad de México\",\n  \"codigoPostal\": \"06760\",\n  \"idPais\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/clientes",
+					"host": ["{{baseUrl}}"],
+					"path": ["clientes"]
+				}
+			}
+		},
+		{
+			"name": "PR-02: Registrar cliente menor de 18 años",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Menor\",\n  \"apellidoPaterno\": \"Prueba\",\n  \"apellidoMaterno\": \"Test\",\n  \"fechaNacimiento\": \"2012-01-01\",\n  \"password\": \"Segura123#\",\n  \"curp\": \"TEST120101HMCTST01\",\n  \"rfc\": \"TEST120101AB1\",\n  \"sexo\": \"H\",\n  \"idNacionalidad\": 1,\n  \"idEstadoCivil\": 1,\n  \"correoElectronico\": \"menor@testmail.com\",\n  \"ladaMovil\": 521,\n  \"telefonoMovil\": 1234567890,\n  \"idOcupacion\": 1,\n  \"ingresoMensual\": 1000.00,\n  \"calle\": \"Calle Falsa\",\n  \"numeroExterior\": \"123\",\n  \"colonia\": \"Centro\",\n  \"municipio\": \"Puebla\",\n  \"estado\": \"Puebla\",\n  \"codigoPostal\": \"72000\",\n  \"idPais\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/clientes",
+					"host": ["{{baseUrl}}"],
+					"path": ["clientes"]
+				}
+			}
+		},
+		{
+			"name": "PR-03: CURP duplicada",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Roberto\",\n  \"apellidoPaterno\": \"García\",\n  \"apellidoMaterno\": \"Ríos\",\n  \"fechaNacimiento\": \"1990-05-10\",\n  \"password\": \"Segura123#\",\n  \"curp\": \"GARM920615HMCRSN01\",\n  \"rfc\": \"GARM900510ZZ9\",\n  \"sexo\": \"H\",\n  \"idNacionalidad\": 1,\n  \"idEstadoCivil\": 1,\n  \"correoElectronico\": \"otro.correo@testmail.com\",\n  \"ladaMovil\": 521,\n  \"telefonoMovil\": 1234567890,\n  \"idOcupacion\": 2,\n  \"ingresoMensual\": 20000.00,\n  \"calle\": \"Av. Hidalgo\",\n  \"numeroExterior\": \"100\",\n  \"colonia\": \"Centro\",\n  \"municipio\": \"Guadalajara\",\n  \"estado\": \"Jalisco\",\n  \"codigoPostal\": \"44100\",\n  \"idPais\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/clientes",
+					"host": ["{{baseUrl}}"],
+					"path": ["clientes"]
+				}
+			}
+		},
+		{
+			"name": "PR-04: RFC duplicado",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Mariana\",\n  \"apellidoPaterno\": \"García\",\n  \"apellidoMaterno\": \"Ríos\",\n  \"fechaNacimiento\": \"1994-08-20\",\n  \"password\": \"Segura123#\",\n  \"curp\": \"GARM940820MMCRSN02\",\n  \"rfc\": \"GARM920615AB1\",\n  \"sexo\": \"M\",\n  \"idNacionalidad\": 1,\n  \"idEstadoCivil\": 1,\n  \"correoElectronico\": \"mariana.garcia@testmail.com\",\n  \"ladaMovil\": 521,\n  \"telefonoMovil\": 1234567890,\n  \"idOcupacion\": 2,\n  \"ingresoMensual\": 22000.00,\n  \"calle\": \"Av. Juárez\",\n  \"numeroExterior\": \"200\",\n  \"colonia\": \"Americana\",\n  \"municipio\": \"Guadalajara\",\n  \"estado\": \"Jalisco\",\n  \"codigoPostal\": \"44160\",\n  \"idPais\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/clientes",
+					"host": ["{{baseUrl}}"],
+					"path": ["clientes"]
+				}
+			}
+		},
+		{
+			"name": "PR-05: Correo duplicado",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Lucía\",\n  \"apellidoPaterno\": \"Mendoza\",\n  \"apellidoMaterno\": \"Ríos\",\n  \"fechaNacimiento\": \"1993-03-12\",\n  \"password\": \"Segura123#\",\n  \"curp\": \"MERL930312MMCRSN03\",\n  \"rfc\": \"MERL930312XX3\",\n  \"sexo\": \"M\",\n  \"idNacionalidad\": 1,\n  \"idEstadoCivil\": 1,\n  \"correoElectronico\": \"alejandro.garcia@testmail.com\",\n  \"ladaMovil\": 521,\n  \"telefonoMovil\": 1234567890,\n  \"idOcupacion\": 3,\n  \"ingresoMensual\": 18000.00,\n  \"calle\": \"Vallarta\",\n  \"numeroExterior\": \"300\",\n  \"colonia\": \"Moderna\",\n  \"municipio\": \"Guadalajara\",\n  \"estado\": \"Jalisco\",\n  \"codigoPostal\": \"44190\",\n  \"idPais\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/clientes",
+					"host": ["{{baseUrl}}"],
+					"path": ["clientes"]
+				}
+			}
+		},
+		{
+			"name": "PR-06: Teléfono con 9 u 11 dígitos",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Fernando\",\n  \"apellidoPaterno\": \"Castro\",\n  \"apellidoMaterno\": \"Vara\",\n  \"fechaNacimiento\": \"1990-11-23\",\n  \"password\": \"Segura123#\",\n  \"curp\": \"CAVF901123HMCRSN04\",\n  \"rfc\": \"CAVF901123YY4\",\n  \"sexo\": \"H\",\n  \"idNacionalidad\": 1,\n  \"idEstadoCivil\": 1,\n  \"correoElectronico\": \"fernando.castro@testmail.com\",\n  \"ladaMovil\": 521,\n  \"telefonoMovil\": 123456789,\n  \"idOcupacion\": 2,\n  \"ingresoMensual\": 30000.00,\n  \"calle\": \"Av. Sonora\",\n  \"numeroExterior\": \"15\",\n  \"colonia\": \"Condesa\",\n  \"municipio\": \"Cuauhtémoc\",\n  \"estado\": \"Ciudad de México\",\n  \"codigoPostal\": \"06140\",\n  \"idPais\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/clientes",
+					"host": ["{{baseUrl}}"],
+					"path": ["clientes"]
+				}
+			}
+		},
+		{
+			"name": "PR-07: Teléfono válido de 10 dígitos",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Verónica\",\n  \"apellidoPaterno\": \"Sánchez\",\n  \"apellidoMaterno\": \"Díaz\",\n  \"fechaNacimiento\": \"1988-02-14\",\n  \"password\": \"Segura123#\",\n  \"curp\": \"SADV880214MMCRSN05\",\n  \"rfc\": \"SADV880214ZZ5\",\n  \"sexo\": \"M\",\n  \"idNacionalidad\": 1,\n  \"idEstadoCivil\": 1,\n  \"correoElectronico\": \"veronica.sanchez@testmail.com\",\n  \"ladaMovil\": 521,\n  \"telefonoMovil\": 1987654321,\n  \"idOcupacion\": 2,\n  \"ingresoMensual\": 40000.00,\n  \"calle\": \"Av. Revolución\",\n  \"numeroExterior\": \"80\",\n  \"colonia\": \"Mixcoac\",\n  \"municipio\": \"Benito Juárez\",\n  \"estado\": \"Ciudad de México\",\n  \"codigoPostal\": \"03910\",\n  \"idPais\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/clientes",
+					"host": ["{{baseUrl}}"],
+					"path": ["clientes"]
+				}
+			}
+		},
+		{
+			"name": "PR-08: Código postal con 4 o 6 dígitos",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Diana\",\n  \"apellidoPaterno\": \"Rosas\",\n  \"apellidoMaterno\": \"Paz\",\n  \"fechaNacimiento\": \"1996-07-30\",\n  \"password\": \"Segura123#\",\n  \"curp\": \"ROPD960730MMCRSN06\",\n  \"rfc\": \"ROPD960730WW6\",\n  \"sexo\": \"M\",\n  \"idNacionalidad\": 1,\n  \"idEstadoCivil\": 1,\n  \"correoElectronico\": \"diana.rosas@testmail.com\",\n  \"ladaMovil\": 521,\n  \"telefonoMovil\": 1234567890,\n  \"idOcupacion\": 2,\n  \"ingresoMensual\": 28000.00,\n  \"calle\": \"Calle 10\",\n  \"numeroExterior\": \"55\",\n  \"colonia\": \"San Pedro\",\n  \"municipio\": \"Monterrey\",\n  \"estado\": \"Nuevo León\",\n  \"codigoPostal\": \"6400\",\n  \"idPais\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/clientes",
+					"host": ["{{baseUrl}}"],
+					"path": ["clientes"]
+				}
+			}
+		},
+		{
+			"name": "PR-09: Ingreso mensual <= 0",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Gabriel\",\n  \"apellidoPaterno\": \"Torres\",\n  \"apellidoMaterno\": \"Cruz\",\n  \"fechaNacimiento\": \"1991-09-05\",\n  \"password\": \"Segura123#\",\n  \"curp\": \"TOCG910905HMCRSN07\",\n  \"rfc\": \"TOCG910905QQ7\",\n  \"sexo\": \"H\",\n  \"idNacionalidad\": 1,\n  \"idEstadoCivil\": 1,\n  \"correoElectronico\": \"gabriel.torres@testmail.com\",\n  \"ladaMovil\": 521,\n  \"telefonoMovil\": 1234567890,\n  \"idOcupacion\": 1,\n  \"ingresoMensual\": 0.00,\n  \"calle\": \"Av. Central\",\n  \"numeroExterior\": \"12\",\n  \"colonia\": \"Centro\",\n  \"municipio\": \"Mérida\",\n  \"estado\": \"Yucatán\",\n  \"codigoPostal\": \"97000\",\n  \"idPais\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/clientes",
+					"host": ["{{baseUrl}}"],
+					"path": ["clientes"]
+				}
+			}
+		},
+		{
+			"name": "PR-10: Consultas de Cliente",
+			"item": [
+				{
+					"name": "PR-10.1 - Consulta por ID existente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/clientes/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["clientes", "1"]
+						}
+					}
+				},
+				{
+					"name": "PR-10.2 - Consulta por CURP existente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/clientes/curp/GARM920615HMCRSN01",
+							"host": ["{{baseUrl}}"],
+							"path": ["clientes", "curp", "GARM920615HMCRSN01"]
+						}
+					}
+				},
+				{
+					"name": "PR-10.3 - Consulta por RFC existente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/clientes/rfc/GARM920615AB1",
+							"host": ["{{baseUrl}}"],
+							"path": ["clientes", "rfc", "GARM920615AB1"]
+						}
+					}
+				},
+				{
+					"name": "PR-10.4 - Consulta por Número de Cuenta",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/clientes/cuenta/{{numeroCuenta}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["clientes", "cuenta", "{{numeroCuenta}}"]
+						}
+					}
+				},
+				{
+					"name": "PR-10.5 - Consulta por ID Inexistente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/clientes/99999",
+							"host": ["{{baseUrl}}"],
+							"path": ["clientes", "99999"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "PR-11: Actualizar cliente intentando cambiar CURP y RFC",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nombre\": \"Alejandro Modificado\",\n  \"segundoNombre\": \"Manuel\",\n  \"apellidoPaterno\": \"García\",\n  \"apellidoMaterno\": \"Ríos\",\n  \"fechaNacimiento\": \"1992-06-15\",\n  \"password\": \"Segura123#\",\n  \"curp\": \"INTENTO_CAMBIO_CURP\",\n  \"rfc\": \"INTENTO_RFC\",\n  \"sexo\": \"H\",\n  \"idNacionalidad\": 1,\n  \"idEstadoCivil\": 1,\n  \"correoElectronico\": \"alejandro.garcia@testmail.com\",\n  \"ladaMovil\": 521,\n  \"telefonoMovil\": 1234567890,\n  \"idOcupacion\": 3,\n  \"empresa\": \"Empresa Nueva SA\",\n  \"ingresoMensual\": 45000.00,\n  \"calle\": \"Av. Insurgentes Sur\",\n  \"numeroExterior\": \"500\",\n  \"numeroInterior\": \"5B\",\n  \"colonia\": \"Roma Sur\",\n  \"municipio\": \"Cuauhtémoc\",\n  \"estado\": \"Ciudad de México\",\n  \"codigoPostal\": \"06760\",\n  \"idPais\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/clientes/1",
+					"host": ["{{baseUrl}}"],
+					"path": ["clientes", "1"]
+				}
+			}
+		},
+		{
+			"name": "PR-12: Baja lógica de cliente",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/clientes/1",
+					"host": ["{{baseUrl}}"],
+					"path": ["clientes", "1"]
+				}
+			}
+		},
+		{
+			"name": "PR-13: PATCH de cuenta con saldo negativo",
+			"request": {
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"saldo\": -150.00,\n  \"estatus\": \"ACTIVA\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/cuentas/{{numeroCuenta}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["cuentas", "{{numeroCuenta}}"]
+				}
+			}
+		},
+		{
+			"name": "PR-14: Rollback transaccional (Comprobación BD)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/cuentas",
+					"host": ["{{baseUrl}}"],
+					"path": ["cuentas"]
+				}
+			}
+		},
+		{
+			"name": "PR-15: Sincronización de catálogo GestoPago",
+			"item": [
+				{
+					"name": "PR-15.1 - Consultar Catálogo Productos (Caché)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/gestopago/catalogo/productos",
+							"host": ["{{baseUrl}}"],
+							"path": ["gestopago", "catalogo", "productos"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080"
+		},
+		{
+			"key": "numeroCuenta",
+			"value": "CUENTA_TEMP"
+		}
+	]
+}
