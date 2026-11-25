@@ -1,20 +1,20 @@
 package com.proyecto.servicios.service.Impl;
 
 import com.proyecto.servicios.entity.catalogo.CatalogoEstadoCivil;
-import com.proyecto.servicios.entity.catalogo.CatalogoNacionalidad;
 import com.proyecto.servicios.entity.catalogo.CatalogoOcupacion;
+import com.proyecto.servicios.entity.catalogo.CatalogoPais;
 import com.proyecto.servicios.entity.sf.Cliente;
 import com.proyecto.servicios.entity.sf.Cuenta;
 import com.proyecto.servicios.entity.sf.Domicilio;
-import com.proyecto.servicios.enums.EstatusCuenta;
+import com.proyecto.servicios.entity.cuentas.EstatusCuenta;
 import com.proyecto.servicios.exception.*;
 import com.proyecto.servicios.model.ClienteActualizaRequest;
 import com.proyecto.servicios.model.ClienteConsultaRequest;
 import com.proyecto.servicios.model.ClienteRequest;
 import com.proyecto.servicios.model.ClienteResponse;
 import com.proyecto.servicios.repositorys.catalogo.CatalogoEstadoCivilRepository;
-import com.proyecto.servicios.repositorys.catalogo.CatalogoNacionalidadRepository;
 import com.proyecto.servicios.repositorys.catalogo.CatalogoOcupacionRepository;
+import com.proyecto.servicios.repositorys.catalogo.CatalogoPaisRepository;
 import com.proyecto.servicios.repositorys.sf.ClienteRepository;
 import com.proyecto.servicios.repositorys.sf.CuentaRepository;
 import com.proyecto.servicios.service.IClienteService;
@@ -40,9 +40,10 @@ public class ClienteServiceImpl implements IClienteService {
 
     private final ClienteRepository clienteRepository;
     private final CuentaRepository cuentaRepository;
-    private final CatalogoNacionalidadRepository nacionalidadRepository;
+    private final CatalogoPaisRepository paisRepository;
     private final CatalogoEstadoCivilRepository estadoCivilRepository;
     private final CatalogoOcupacionRepository ocupacionRepository;
+    private final com.proyecto.servicios.security.AuthenticatedUserService authenticatedUserService;
 
     @Override
     @Transactional
@@ -76,6 +77,15 @@ public class ClienteServiceImpl implements IClienteService {
         domicilio.setMunicipio(request.getMunicipio());
         domicilio.setEstado(request.getEstado());
         domicilio.setCodigoPostal(request.getCodigoPostal());
+        if (request.getIdPais() != null) {
+            CatalogoPais pais = paisRepository.findById(request.getIdPais())
+                    .orElseThrow(() -> new ClienteNegocioException("País no encontrado: " + request.getIdPais()));
+            domicilio.setPais(pais);
+        } else if (request.getPais() != null && !request.getPais().trim().isEmpty()) {
+            CatalogoPais pais = paisRepository.findByDescripcionIgnoreCase(request.getPais().trim())
+                    .orElseThrow(() -> new ClienteNegocioException("País no encontrado: " + request.getPais()));
+            domicilio.setPais(pais);
+        }
         domicilio.setCliente(cliente);
         cliente.setDomicilio(domicilio);
 
@@ -141,6 +151,14 @@ public class ClienteServiceImpl implements IClienteService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ClienteResponse consultarPorId(Integer id) {
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new ClienteNoEncontradoException("Cliente no encontrado con ID: " + id));
+        return mapearAResponse(cliente);
+    }
+
+    @Override
     @Transactional
     public ClienteResponse actualizarCliente(ClienteActualizaRequest request) {
         Cliente cliente = clienteRepository.findById(request.getId())
@@ -191,8 +209,12 @@ public class ClienteServiceImpl implements IClienteService {
         Optional.ofNullable(req.getIngresoMensual()).ifPresent(cliente::setIngresoMensual);
 
         if (req.getIdNacionalidad() != null) {
-            CatalogoNacionalidad nac = nacionalidadRepository.findById(req.getIdNacionalidad())
+            CatalogoPais nac = paisRepository.findById(req.getIdNacionalidad())
                     .orElseThrow(() -> new ClienteNegocioException("La nacionalidad especificada no existe con ID: " + req.getIdNacionalidad()));
+            cliente.setNacionalidad(nac);
+        } else if (req.getNacionalidad() != null && !req.getNacionalidad().trim().isEmpty()) {
+            CatalogoPais nac = paisRepository.findByNacionalidadIgnoreCase(req.getNacionalidad().trim())
+                    .orElseThrow(() -> new ClienteNegocioException("La nacionalidad especificada no existe: " + req.getNacionalidad()));
             cliente.setNacionalidad(nac);
         }
         if (req.getIdEstadoCivil() != null) {
@@ -215,6 +237,15 @@ public class ClienteServiceImpl implements IClienteService {
             Optional.ofNullable(req.getMunicipio()).filter(v -> !v.trim().isEmpty()).ifPresent(d::setMunicipio);
             Optional.ofNullable(req.getEstado()).filter(v -> !v.trim().isEmpty()).ifPresent(d::setEstado);
             Optional.ofNullable(req.getCodigoPostal()).filter(v -> !v.trim().isEmpty()).ifPresent(d::setCodigoPostal);
+            if (req.getIdPais() != null) {
+                CatalogoPais pais = paisRepository.findById(req.getIdPais())
+                        .orElseThrow(() -> new ClienteNegocioException("El país especificado no existe con ID: " + req.getIdPais()));
+                d.setPais(pais);
+            } else if (req.getPais() != null && !req.getPais().trim().isEmpty()) {
+                CatalogoPais pais = paisRepository.findByDescripcionIgnoreCase(req.getPais().trim())
+                        .orElseThrow(() -> new ClienteNegocioException("El país especificado no existe: " + req.getPais()));
+                d.setPais(pais);
+            }
         }
     }
 
@@ -237,9 +268,17 @@ public class ClienteServiceImpl implements IClienteService {
         cliente.setEmpresa(req.getEmpresa());
         cliente.setIngresoMensual(req.getIngresoMensual());
 
-        CatalogoNacionalidad nac = nacionalidadRepository.findById(req.getIdNacionalidad())
-                .orElseThrow(() -> new ClienteNegocioException("Nacionalidad no encontrada: " + req.getIdNacionalidad()));
-        cliente.setNacionalidad(nac);
+        CatalogoPais nac = null;
+        if (req.getIdNacionalidad() != null) {
+            nac = paisRepository.findById(req.getIdNacionalidad())
+                    .orElseThrow(() -> new ClienteNegocioException("Nacionalidad no encontrada: " + req.getIdNacionalidad()));
+        } else if (req.getNacionalidad() != null && !req.getNacionalidad().trim().isEmpty()) {
+            nac = paisRepository.findByNacionalidadIgnoreCase(req.getNacionalidad().trim())
+                    .orElseThrow(() -> new ClienteNegocioException("Nacionalidad no encontrada: " + req.getNacionalidad()));
+        }
+        if (nac != null) {
+            cliente.setNacionalidad(nac);
+        }
 
         CatalogoEstadoCivil edo = estadoCivilRepository.findById(req.getIdEstadoCivil())
                 .orElseThrow(() -> new ClienteNegocioException("Estado civil no encontrado: " + req.getIdEstadoCivil()));
@@ -290,19 +329,44 @@ public class ClienteServiceImpl implements IClienteService {
             resp.setCodigoPostal(d.getCodigoPostal());
             if (d.getPais() != null) {
                 resp.setIdPais(d.getPais().getId());
+                resp.setPais(d.getPais().getDescripcion());
+                resp.setCodigoIsoPais(d.getPais().getCodigoIso());
+                resp.setLadaPais(d.getPais().getLada());
             }
         }
 
         if (c.getNacionalidad() != null) {
             resp.setIdNacionalidad(c.getNacionalidad().getId());
+            resp.setNacionalidad(c.getNacionalidad().getNacionalidad());
+            if (resp.getPais() == null) {
+                resp.setPais(c.getNacionalidad().getDescripcion());
+            }
+            if (resp.getCodigoIsoPais() == null) {
+                resp.setCodigoIsoPais(c.getNacionalidad().getCodigoIso());
+            }
+            if (resp.getLadaPais() == null) {
+                resp.setLadaPais(c.getNacionalidad().getLada());
+            }
         }
         if (c.getEstadoCivil() != null) {
             resp.setIdEstadoCivil(c.getEstadoCivil().getId());
+            resp.setEstadoCivil(c.getEstadoCivil().getDescripcion());
         }
         if (c.getOcupacion() != null) {
             resp.setIdOcupacion(c.getOcupacion().getId());
+            resp.setOcupacion(c.getOcupacion().getNombre());
         }
 
         return resp;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ClienteResponse obtenerMiPerfil() {
+        com.proyecto.servicios.entity.seguridad.Usuario usuario = authenticatedUserService.obtenerUsuarioAutenticadoActivo();
+        if (!authenticatedUserService.esCliente(usuario) || usuario.getCliente() == null) {
+            throw new org.springframework.security.access.AccessDeniedException("Solo un cliente autenticado puede consultar su propio perfil.");
+        }
+        return consultarPorId(usuario.getCliente().getId());
     }
 }

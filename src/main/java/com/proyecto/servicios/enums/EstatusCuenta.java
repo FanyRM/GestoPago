@@ -1,6 +1,10 @@
 package com.proyecto.servicios.enums;
 
 public enum EstatusCuenta {
+    PENDIENTE_REVISION,
     ACTIVA,
-    INACTIVA
+    RECHAZADA,
+    INACTIVA,
+    BLOQUEADA,
+    CANCELADA
 }

@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.StringReader;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 
@@ -143,6 +144,7 @@ public class CatalogoProductoServiceImpl implements CatalogoProductoService {
                         try {
                             return "Bearer " + gestoPagoTokenService.obtenerBearerTokenValido();
                         } catch (Exception ignored) {
+                            // Fallback al token original almacenado si la obtencion del token descifrado falla
                         }
                     }
                     return "Bearer " + token;
@@ -198,7 +200,7 @@ public class CatalogoProductoServiceImpl implements CatalogoProductoService {
 
             CatalogoCacheDto nuevoCache = new CatalogoCacheDto();
             nuevoCache.setProductos(productos);
-            nuevoCache.setFechaActualizacion(LocalDateTime.now());
+            nuevoCache.setFechaActualizacion(LocalDateTime.now(ZoneId.systemDefault()));
             nuevoCache.setTotalProductos(productos.size());
 
             catalogoRepository.save(nuevoCache);

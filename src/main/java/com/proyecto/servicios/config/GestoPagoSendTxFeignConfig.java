@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Bean;
 import java.util.concurrent.TimeUnit;
 
 public class GestoPagoSendTxFeignConfig {
-
     @Bean
     public RequestInterceptor gestoPagoSendTxAuthInterceptor(GestoPagoTokenService tokenService) {
         return requestTemplate -> {
@@ -20,10 +19,6 @@ public class GestoPagoSendTxFeignConfig {
         };
     }
 
-    /**
-     * Prohibido reintentar operaciones financieras automaticamente ante timeouts a nivel transporte:
-     * un timeout de lectura no garantiza que el proveedor no haya procesado el cargo.
-     */
     @Bean
     public Retryer gestoPagoNoRetryer() {
         return Retryer.NEVER_RETRY;

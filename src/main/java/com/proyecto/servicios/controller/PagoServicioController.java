@@ -1,19 +1,25 @@
 package com.proyecto.servicios.controller;
 
 import com.proyecto.servicios.entity.gestopago.EstatusTransaccion;
+import com.proyecto.servicios.exception.ReglaNegocioException;
+import com.proyecto.servicios.model.PageResponse;
 import com.proyecto.servicios.model.gestopago.sendtx.HistorialCompraResponse;
 import com.proyecto.servicios.model.gestopago.sendtx.PagoServicioResponse;
 import com.proyecto.servicios.model.gestopago.sendtx.SendTxRequest;
 import com.proyecto.servicios.service.PagoServicioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,8 +35,9 @@ import java.time.LocalDate;
 @RequestMapping("/servicios")
 @Tag(
         name = "Pagos de Servicios y Recargas (GestoPago)",
-        description = "Operaciones de recargas y pago de servicios con cargo a cuenta bancaria, conciliación e historial paginado"
+        description = "Operaciones de recargas y pago de servicios con cargo a cuenta bancaria, conciliación e historial paginado del cliente"
 )
+@SecurityRequirement(name = "BearerAuth")
 public class PagoServicioController {
 
     private final PagoServicioService pagoServicioService;
@@ -44,9 +51,10 @@ public class PagoServicioController {
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
+    @PreAuthorize("hasRole('CLIENTE')")
     @Operation(
-            summary = "Realizar recarga o pago de servicio",
-            description = "Valida identidad del cliente, existencia y estatus activo de la cuenta, saldo suficiente, "
+            summary = "Realizar recarga o pago de servicio (Solo CLIENTE)",
+            description = "Valida identidad del cliente autenticado, su única cuenta de ahorro en estatus ACTIVA, saldo suficiente, "
                     + "catálogo y precio del producto, idempotencia y ejecuta el cargo e integración con GestoPago sendTx.do"
     )
     public ResponseEntity<PagoServicioResponse> realizarPagoServicio(
@@ -62,12 +70,12 @@ public class PagoServicioController {
     }
 
     @GetMapping(value = "/historial", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('CLIENTE')")
     @Operation(
-            summary = "Consultar historial de pagos (paginado)",
-            description = "Retorna el historial paginado de recargas y pagos de servicios, "
-                    + "general o filtrado por rango de fechas, número de cuenta y estatus"
+            summary = "Consultar historial de compras del cliente (paginado)",
+            description = "Retorna el historial paginado de recargas y pagos de servicios realizados con la cuenta de ahorro del cliente autenticado"
     )
-    public ResponseEntity<Page<HistorialCompraResponse>> obtenerHistorialCompras(
+    public ResponseEntity<PageResponse<HistorialCompraResponse>> obtenerHistorialCompras(
             @Parameter(description = "Fecha inicial del filtro en formato yyyy-MM-dd", example = "2026-10-01")
             @RequestParam(value = "fechaInicio", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
@@ -94,21 +102,33 @@ public class PagoServicioController {
             @Parameter(description = "Dirección de ordenamiento (ASC o DESC)", example = "DESC")
             @RequestParam(value = "sortDir", defaultValue = "DESC") String sortDir) {
 
-        Page<HistorialCompraResponse> historial = pagoServicioService.obtenerHistorialCompras(
-                fechaInicio, fechaFin, numeroCuenta, estatus, page, size, sortBy, sortDir);
+        if (page < 0) {
+            throw new ReglaNegocioException("El numero de pagina no puede ser negativo.");
+        }
+        if (size < 1 || size > 100) {
+            throw new ReglaNegocioException("El tamano de pagina debe estar entre 1 y 100.");
+        }
+        Sort.Direction direction = "ASC".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        String sortField = (sortBy != null && !sortBy.isBlank()) ? sortBy.trim() : "fechaCreacion";
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
+
+        PageResponse<HistorialCompraResponse> historial = pagoServicioService.obtenerHistorialCompras(
+                fechaInicio, fechaFin, numeroCuenta, estatus, pageable);
         return new ResponseEntity<>(historial, HttpStatus.OK);
     }
 
     @GetMapping(value = "/pagos/{upc}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMIN')")
     @Operation(
             summary = "Consultar estatus de transacción por folio UPC",
-            description = "Permite verificar el estatus actual de una compra o recarga mediante su folio UPC"
+            description = "Permite al cliente verificar sus compras o al administrador auditar una transacción mediante su folio UPC"
     )
     public ResponseEntity<PagoServicioResponse> consultarPorUpc(@PathVariable("upc") String upc) {
         return new ResponseEntity<>(pagoServicioService.consultarTransaccionPorUpc(upc), HttpStatus.OK);
     }
 
     @PostMapping(value = "/pagos/{upc}/conciliar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMIN')")
     @Operation(
             summary = "Conciliar transacción pendiente con el proveedor",
             description = "Consulta en GestoPago el resultado real de una operación en estatus PENDIENTE_CONCILIACION "

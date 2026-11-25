@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.proyecto.servicios.entity.gestopago.EstatusTransaccion;
 import com.proyecto.servicios.exception.GlobalExceptionHandler;
 import com.proyecto.servicios.exception.SaldoInsuficienteException;
+import com.proyecto.servicios.model.PageResponse;
+import com.proyecto.servicios.model.gestopago.sendtx.HistorialCompraResponse;
 import com.proyecto.servicios.model.gestopago.sendtx.PagoServicioResponse;
 import com.proyecto.servicios.model.gestopago.sendtx.SendTxRequest;
 import com.proyecto.servicios.service.PagoServicioService;
@@ -20,6 +22,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -158,5 +161,54 @@ class PagoServicioControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.upc").value("9988776655"))
                 .andExpect(jsonPath("$.estatus").value("EXITOSA"));
+    }
+
+    @Test
+    @DisplayName("POST /servicios/pagos/{upc}/conciliar - Conciliacion por UPC exitosa")
+    void conciliarPorUpc_exitoso() throws Exception {
+        PagoServicioResponse response = PagoServicioResponse.builder()
+                .transaccionId(1L)
+                .upc("9988776655")
+                .estatus(EstatusTransaccion.EXITOSA)
+                .build();
+
+        when(pagoServicioService.conciliarTransaccion("9988776655")).thenReturn(response);
+
+        mockMvc.perform(post("/servicios/pagos/9988776655/conciliar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.upc").value("9988776655"))
+                .andExpect(jsonPath("$.estatus").value("EXITOSA"));
+    }
+
+    @Test
+    @DisplayName("GET /servicios/historial - Consulta historial exitosa")
+    void obtenerHistorial_exitoso() throws Exception {
+        HistorialCompraResponse item = HistorialCompraResponse.builder()
+                .id(1L)
+                .upc("9988776655")
+                .numeroCuenta("1234567890")
+                .monto(new BigDecimal("100.00"))
+                .estatus(EstatusTransaccion.EXITOSA)
+                .build();
+
+        PageResponse<HistorialCompraResponse> pageResponse = PageResponse.<HistorialCompraResponse>builder()
+                .contenido(List.of(item))
+                .paginaActual(0)
+                .tamanoPagina(10)
+                .totalElementos(1)
+                .totalPaginas(1)
+                .primera(true)
+                .ultima(true)
+                .build();
+
+        when(pagoServicioService.obtenerHistorialCompras(any(), any(), any(), any(), any()))
+                .thenReturn(pageResponse);
+
+        mockMvc.perform(get("/servicios/historial")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElementos").value(1))
+                .andExpect(jsonPath("$.contenido[0].upc").value("9988776655"));
     }
 }

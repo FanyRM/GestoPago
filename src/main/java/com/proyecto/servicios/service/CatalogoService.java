@@ -4,12 +4,19 @@ import com.proyecto.servicios.entity.catalogo.CatalogoEstadoCivil;
 import com.proyecto.servicios.entity.catalogo.CatalogoNacionalidad;
 import com.proyecto.servicios.entity.catalogo.CatalogoOcupacion;
 import com.proyecto.servicios.entity.catalogo.CatalogoPais;
+import com.proyecto.servicios.model.CatalogoPaisRequest;
 
 import java.util.List;
 
 public interface CatalogoService {
+
     List<CatalogoEstadoCivil> consultarEstadosCiviles();
+
     List<CatalogoNacionalidad> consultarNacionalidades();
+
     List<CatalogoOcupacion> consultarOcupaciones();
+
     List<CatalogoPais> consultarPaises();
+
+    CatalogoPais registrarPais(CatalogoPaisRequest request);
 }

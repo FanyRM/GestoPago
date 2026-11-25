@@ -42,9 +42,15 @@ public class ClienteResponse {
     private String estado;
     private String codigoPostal;
     private Integer idPais;
+    private String pais;
+    private String codigoIsoPais;
+    private String ladaPais;
 
     // Catálogos
     private Integer idNacionalidad;
+    private String nacionalidad;
     private Integer idEstadoCivil;
+    private String estadoCivil;
     private Integer idOcupacion;
+    private String ocupacion;
 }

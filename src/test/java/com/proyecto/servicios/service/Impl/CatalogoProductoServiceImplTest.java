@@ -131,8 +131,8 @@ class CatalogoProductoServiceImplTest {
         when(gestoPagoTokenService.obtenerTokenActivo(83, "GPS83-TPV-17"))
                 .thenReturn(Optional.of(tokenEntity));
 
-        // Usamos RuntimeException genérica — el catch (Exception e) del service la captura
-        // y reintenta, igual que con FeignException de tipo no-401.
+        // Se simula un fallo con RuntimeException para verificar que el servicio reintente
+        // de la misma manera que ante errores no-401.
         when(catProductClient.getProductList(anyString()))
                 .thenThrow(new RuntimeException("Servicio no disponible (503)"));
 

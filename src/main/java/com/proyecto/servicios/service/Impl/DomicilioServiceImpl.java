@@ -10,24 +10,24 @@ import com.proyecto.servicios.repositorys.catalogo.CatalogoPaisRepository;
 import com.proyecto.servicios.repositorys.sf.ClienteRepository;
 import com.proyecto.servicios.repositorys.sf.DomicilioRepository;
 import com.proyecto.servicios.service.DomicilioService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class DomicilioServiceImpl implements DomicilioService {
 
-    @Autowired
-    private DomicilioRepository domicilioRepository;
+    private static final String RESP_EXITO = "EXITO";
+    private static final String RESP_ERROR = "ERROR";
+    private static final String MSG_DOMICILIO_NO_ENCONTRADO = "Domicilio no encontrado";
+    private static final String MSG_CONSULTA_EXITOSA = "Consulta exitosa";
 
-    @Autowired
-    private ClienteRepository clienteRepository;
-
-    @Autowired
-    private CatalogoPaisRepository paisRepository;
+    private final DomicilioRepository domicilioRepository;
+    private final ClienteRepository clienteRepository;
+    private final CatalogoPaisRepository paisRepository;
 
     @Override
     @Transactional
@@ -36,13 +36,13 @@ public class DomicilioServiceImpl implements DomicilioService {
         
         Cliente cliente = clienteRepository.findById(request.getIdCliente()).orElse(null);
         if (cliente == null) {
-            response.setEstatus("ERROR");
+            response.setEstatus(RESP_ERROR);
             response.setMensaje("Cliente no encontrado");
             return response;
         }
 
         if (domicilioRepository.findByClienteId(cliente.getId()).isPresent()) {
-            response.setEstatus("ERROR");
+            response.setEstatus(RESP_ERROR);
             response.setMensaje("El cliente ya tiene un domicilio registrado");
             return response;
         }
@@ -54,6 +54,12 @@ public class DomicilioServiceImpl implements DomicilioService {
         if (request.getIdPais() != null) {
             CatalogoPais pais = paisRepository.findById(request.getIdPais()).orElse(null);
             domicilio.setPais(pais);
+        } else if (request.getPais() != null && !request.getPais().trim().isEmpty()) {
+            CatalogoPais pais = paisRepository.findByDescripcionIgnoreCase(request.getPais().trim()).orElse(null);
+            domicilio.setPais(pais);
+        } else if (request.getPais() != null && !request.getPais().trim().isEmpty()) {
+            CatalogoPais pais = paisRepository.findByDescripcionIgnoreCase(request.getPais().trim()).orElse(null);
+            domicilio.setPais(pais);
         }
 
         domicilio = domicilioRepository.save(domicilio);
@@ -63,18 +69,18 @@ public class DomicilioServiceImpl implements DomicilioService {
     @Override
     public List<DomicilioResponse> consultarTodos() {
         return domicilioRepository.findAll().stream()
-                .map(d -> mapToResponse(d, "Consulta exitosa"))
-                .collect(Collectors.toList());
+                .map(d -> mapToResponse(d, MSG_CONSULTA_EXITOSA))
+                .toList();
     }
 
     @Override
     public DomicilioResponse consultarPorId(Integer id) {
         return domicilioRepository.findById(id)
-                .map(d -> mapToResponse(d, "Consulta exitosa"))
+                .map(d -> mapToResponse(d, MSG_CONSULTA_EXITOSA))
                 .orElseGet(() -> {
                     DomicilioResponse error = new DomicilioResponse();
-                    error.setEstatus("ERROR");
-                    error.setMensaje("Domicilio no encontrado");
+                    error.setEstatus(RESP_ERROR);
+                    error.setMensaje(MSG_DOMICILIO_NO_ENCONTRADO);
                     return error;
                 });
     }
@@ -82,10 +88,10 @@ public class DomicilioServiceImpl implements DomicilioService {
     @Override
     public DomicilioResponse consultarPorCliente(Integer idCliente) {
         return domicilioRepository.findByClienteId(idCliente)
-                .map(d -> mapToResponse(d, "Consulta exitosa"))
+                .map(d -> mapToResponse(d, MSG_CONSULTA_EXITOSA))
                 .orElseGet(() -> {
                     DomicilioResponse error = new DomicilioResponse();
-                    error.setEstatus("ERROR");
+                    error.setEstatus(RESP_ERROR);
                     error.setMensaje("Domicilio no encontrado para este cliente");
                     return error;
                 });
@@ -98,8 +104,8 @@ public class DomicilioServiceImpl implements DomicilioService {
         Domicilio domicilio = domicilioRepository.findById(id).orElse(null);
 
         if (domicilio == null) {
-            response.setEstatus("ERROR");
-            response.setMensaje("Domicilio no encontrado");
+            response.setEstatus(RESP_ERROR);
+            response.setMensaje(MSG_DOMICILIO_NO_ENCONTRADO);
             return response;
         }
 
@@ -108,6 +114,12 @@ public class DomicilioServiceImpl implements DomicilioService {
         if (request.getIdPais() != null) {
             CatalogoPais pais = paisRepository.findById(request.getIdPais()).orElse(null);
             domicilio.setPais(pais);
+        } else if (request.getPais() != null && !request.getPais().trim().isEmpty()) {
+            CatalogoPais pais = paisRepository.findByDescripcionIgnoreCase(request.getPais().trim()).orElse(null);
+            domicilio.setPais(pais);
+        } else if (request.getPais() != null && !request.getPais().trim().isEmpty()) {
+            CatalogoPais pais = paisRepository.findByDescripcionIgnoreCase(request.getPais().trim()).orElse(null);
+            domicilio.setPais(pais);
         }
 
         // Si se envía otro idCliente, validar si es posible cambiarlo (en general, no se recomienda, 
@@ -115,12 +127,12 @@ public class DomicilioServiceImpl implements DomicilioService {
         if (!domicilio.getCliente().getId().equals(request.getIdCliente())) {
             Cliente nuevoCliente = clienteRepository.findById(request.getIdCliente()).orElse(null);
             if (nuevoCliente == null) {
-                response.setEstatus("ERROR");
+                response.setEstatus(RESP_ERROR);
                 response.setMensaje("El nuevo cliente indicado no existe");
                 return response;
             }
             if (domicilioRepository.findByClienteId(nuevoCliente.getId()).isPresent()) {
-                response.setEstatus("ERROR");
+                response.setEstatus(RESP_ERROR);
                 response.setMensaje("El nuevo cliente ya tiene un domicilio asociado");
                 return response;
             }
@@ -128,7 +140,7 @@ public class DomicilioServiceImpl implements DomicilioService {
         }
 
         domicilioRepository.save(domicilio);
-        response.setEstatus("EXITO");
+        response.setEstatus(RESP_EXITO);
         response.setMensaje("Domicilio actualizado correctamente");
         return response;
     }
@@ -138,13 +150,13 @@ public class DomicilioServiceImpl implements DomicilioService {
     public GenericResponse eliminarDomicilio(Integer id) {
         GenericResponse response = new GenericResponse();
         if (!domicilioRepository.existsById(id)) {
-            response.setEstatus("ERROR");
-            response.setMensaje("Domicilio no encontrado");
+            response.setEstatus(RESP_ERROR);
+            response.setMensaje(MSG_DOMICILIO_NO_ENCONTRADO);
             return response;
         }
         
         domicilioRepository.deleteById(id);
-        response.setEstatus("EXITO");
+        response.setEstatus(RESP_EXITO);
         response.setMensaje("Domicilio eliminado correctamente");
         return response;
     }
@@ -161,7 +173,7 @@ public class DomicilioServiceImpl implements DomicilioService {
 
     private DomicilioResponse mapToResponse(Domicilio d, String mensaje) {
         DomicilioResponse resp = new DomicilioResponse();
-        resp.setEstatus("EXITO");
+        resp.setEstatus(RESP_EXITO);
         resp.setMensaje(mensaje);
         resp.setId(d.getId());
         resp.setCalle(d.getCalle());
@@ -173,6 +185,9 @@ public class DomicilioServiceImpl implements DomicilioService {
         resp.setCodigoPostal(d.getCodigoPostal());
         if (d.getPais() != null) {
             resp.setIdPais(d.getPais().getId());
+            resp.setPais(d.getPais().getDescripcion());
+            resp.setCodigoIso(d.getPais().getCodigoIso());
+            resp.setLada(d.getPais().getLada());
         }
         if (d.getCliente() != null) {
             resp.setIdCliente(d.getCliente().getId());

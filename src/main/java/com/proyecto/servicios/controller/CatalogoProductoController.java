@@ -3,8 +3,6 @@ package com.proyecto.servicios.controller;
 import com.proyecto.servicios.exception.CatalogoException;
 import com.proyecto.servicios.model.gestopago.catalogo.CatalogoProductoResponse;
 import com.proyecto.servicios.service.CatalogoProductoService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

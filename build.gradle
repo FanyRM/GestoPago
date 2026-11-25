@@ -12,8 +12,12 @@ group 'com.proyecto.servicio.empresa'
 version '1.0'
 
 java{
-    sourceCompatibility=17
-    targetCompatibility=17
+    sourceCompatibility=21
+    targetCompatibility=21
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
 }
 
 repositories {
@@ -46,10 +50,10 @@ dependencies {
     implementation 'org.hibernate:hibernate-core:6.5.3.Final'
     implementation 'io.lettuce:lettuce-core:6.5.1.RELEASE'
     //Seguridad
-    //implementation 'io.jsonwebtoken:jjwt:0.9.1'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
-    implementation 'com.auth0:jwks-rsa:0.22.1'
-    implementation 'com.auth0:java-jwt:4.4.0'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
     //Utilerias Apache Commons
     implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation 'commons-fileupload:commons-fileupload:1.5'
@@ -79,11 +83,9 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.46'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.mockito:mockito-inline:5.1.1'
     testImplementation 'com.h2database:h2:2.2.220'
-    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
     // Requerido por Gradle 9 + JVM test suite plugin para cargar JUnit Platform
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -96,6 +98,7 @@ configurations.all {
 
 test {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport
 }
 
 springBoot {
@@ -103,32 +106,29 @@ springBoot {
     }
 }
 
-sonarqube {
-    properties {
-        property "sonar.exclusions", "**/App.java,**/model/**,**/entity/**,**/enums/**,**/config/**,**/controller/**,**/service/configuracion/**"
-    }
-}
 jacocoTestReport {
+    dependsOn test
     reports {
-        reports {
-            xml.required=true
-        }
+        xml.required = true
+        html.required = true
     }
 }
 
-//ejecutar applicación dentro de contenedor
-//sh gradlew clean build dockerImage dockerUp
-/**
- * Genera imagen
- */
+sonarqube {
+    properties {
+        property "sonar.projectKey", "gestopago-backend"
+        property "sonar.projectName", "Proyecto Integrador Bancario"
+        property "sonar.host.url", "http://localhost:9000"
+        property "sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml"
+        property "sonar.exclusions", "**/App.java,**/model/**,**/entity/**,**/enums/**,**/config/**,**/controller/**"
+    }
+}
+
 task dockerImage(type: Exec) {
     println 'CrearImagen'
     commandLine "docker", "build", "-t", "proyecto-core:0.1", "$projectDir"
 }
 
-/**
- * Ejecuta imagen
- */
 task dockerUp(type: Exec) {
     println "Arranca imagen"
     commandLine "docker-compose", "--compatibility", "up"

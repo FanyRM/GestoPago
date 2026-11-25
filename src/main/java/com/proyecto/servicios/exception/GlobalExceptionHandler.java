@@ -3,9 +3,14 @@ package com.proyecto.servicios.exception;
 import com.proyecto.servicios.model.GenericResponse;
 import com.proyecto.servicios.security.LogSanitizer;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -109,7 +114,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({ResourceNotFoundException.class, CatalogoNotFoundException.class,
-            ClienteNoEncontradoException.class, UsuarioNoEncontradoException.class})
+            ClienteNoEncontradoException.class, UsuarioNoEncontradoException.class, UsuarioNotFoundException.class})
     public ResponseEntity<GenericResponse<Void>> manejarNoEncontrado(RuntimeException ex) {
         GenericResponse<Void> respuesta = GenericResponse.error(
                 HttpStatus.NOT_FOUND.value(),
@@ -154,6 +159,68 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(respuesta);
     }
 
+    @ExceptionHandler(CuentaBloqueadaException.class)
+    public ResponseEntity<GenericResponse> handleCuentaBloqueada(CuentaBloqueadaException ex) {
+        log.warn("Cuenta bloqueada: {}", LogSanitizer.sanitize(ex.getMessage()));
+        GenericResponse respuesta = GenericResponse.error(
+                HttpStatus.LOCKED.value(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.LOCKED).body(respuesta);
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<GenericResponse> handleRateLimitExceeded(RateLimitExceededException ex) {
+        log.warn("Limite de intentos excedido; retryAfterSeconds={}: {}", ex.getRetryAfterSeconds(), LogSanitizer.sanitize(ex.getMessage()));
+        GenericResponse respuesta = GenericResponse.error(
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(respuesta);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<GenericResponse> handleBadCredentials(BadCredentialsException ex) {
+        log.warn("Fallo de credenciales: {}", LogSanitizer.sanitize(ex.getMessage()));
+        GenericResponse response = GenericResponse.error(
+                HttpStatus.UNAUTHORIZED.value(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<GenericResponse> handleDisabled(DisabledException ex) {
+        log.warn("Cuenta deshabilitada o inactiva: {}", LogSanitizer.sanitize(ex.getMessage()));
+        GenericResponse response = GenericResponse.error(
+                HttpStatus.FORBIDDEN.value(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<GenericResponse<Void>> manejarAccesoDenegado(AccessDeniedException ex) {
+        log.warn("Acceso denegado a recurso protegido: {}", LogSanitizer.sanitize(ex.getMessage()));
+        GenericResponse<Void> respuesta = GenericResponse.error(
+                HttpStatus.FORBIDDEN.value(),
+                "Acceso denegado: No cuenta con autorizacion para ejecutar esta operacion"
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(respuesta);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<GenericResponse<Void>> manejarAutenticacion(AuthenticationException ex) {
+        log.warn("Fallo de autenticacion en solicitud entrante: {}", LogSanitizer.sanitize(ex.getMessage()));
+        GenericResponse<Void> respuesta = GenericResponse.error(
+                HttpStatus.UNAUTHORIZED.value(),
+                "Autenticacion requerida o token invalido"
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(respuesta);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<GenericResponse<Void>> manejarExcepcionGenerica(Exception ex) {
         log.error("Error no controlado en el servidor: ", ex);
@@ -163,4 +230,5 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(respuesta);
     }
+
 }

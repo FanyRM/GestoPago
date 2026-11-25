@@ -13,10 +13,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping({"/clientes", "/usuarios"})
+@RequestMapping("/clientes")
 @RequiredArgsConstructor
 public class ClienteController {
 
@@ -38,6 +39,21 @@ public class ClienteController {
         ClienteConsultaRequest consulta = request != null ? request : new ClienteConsultaRequest();
         Page<ClienteResponse> paginaClientes = clienteService.consultarClientes(consulta);
         return ResponseEntity.ok(GenericResponse.exito(PaginaResponse.de(paginaClientes), "Consulta realizada con éxito"));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<GenericResponse<ClienteResponse>> consultarPorId(
+            @PathVariable Integer id
+    ) {
+        ClienteResponse cliente = clienteService.consultarPorId(id);
+        return ResponseEntity.ok(GenericResponse.exito(cliente, "Cliente consultado con éxito"));
+    }
+
+    @GetMapping("/mi-perfil")
+    @PreAuthorize("hasRole('CLIENTE')")
+    public ResponseEntity<GenericResponse<ClienteResponse>> obtenerMiPerfil() {
+        ClienteResponse cliente = clienteService.obtenerMiPerfil();
+        return ResponseEntity.ok(GenericResponse.exito(cliente, "Perfil consultado con éxito"));
     }
 
     @PutMapping

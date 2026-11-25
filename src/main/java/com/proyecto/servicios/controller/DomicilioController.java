@@ -5,7 +5,6 @@ import com.proyecto.servicios.model.DomicilioResponse;
 import com.proyecto.servicios.model.GenericResponse;
 import com.proyecto.servicios.service.DomicilioService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,8 +14,11 @@ import java.util.List;
 @RequestMapping("/domicilios")
 public class DomicilioController {
 
-    @Autowired
-    private DomicilioService domicilioService;
+    private final DomicilioService domicilioService;
+
+    public DomicilioController(DomicilioService domicilioService) {
+        this.domicilioService = domicilioService;
+    }
 
     @PostMapping
     public ResponseEntity<DomicilioResponse> crearDomicilio(@Valid @RequestBody DomicilioRequest request) {

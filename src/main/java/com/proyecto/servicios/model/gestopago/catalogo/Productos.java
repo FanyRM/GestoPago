@@ -12,5 +12,13 @@ import java.util.List;
 public class Productos {
 
     @XmlElement(name = "producto")
-    private List<ProductoXml> productos;
+    private List<ProductoXml> listaProductos;
+
+    public List<ProductoXml> getProductos() {
+        return listaProductos;
+    }
+
+    public void setProductos(List<ProductoXml> productos) {
+        this.listaProductos = productos;
+    }
 }

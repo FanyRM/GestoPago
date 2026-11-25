@@ -4,13 +4,11 @@ import com.proyecto.servicios.entity.gestopago.EstatusTransaccion;
 import com.proyecto.servicios.entity.gestopago.TransaccionServicio;
 import com.proyecto.servicios.entity.sf.Cliente;
 import com.proyecto.servicios.entity.sf.Cuenta;
-import com.proyecto.servicios.enums.EstatusCuenta;
+import com.proyecto.servicios.entity.cuentas.EstatusCuenta;
 import com.proyecto.servicios.exception.CuentaNoOperativaException;
 import com.proyecto.servicios.exception.DuplicateResourceException;
-import com.proyecto.servicios.exception.ResourceNotFoundException;
 import com.proyecto.servicios.exception.SaldoInsuficienteException;
 import com.proyecto.servicios.model.gestopago.catalogo.ProductoXml;
-import com.proyecto.servicios.model.gestopago.sendtx.GestoPagoTxResult;
 import com.proyecto.servicios.repositorys.gestopago.TransaccionServicioRepository;
 import com.proyecto.servicios.repositorys.sf.CuentaRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -80,7 +77,7 @@ class TransaccionPersistenceServiceTest {
     void reservarYDebitarSaldo_exitoso() {
         when(cuentaRepository.findByNumeroCuentaForUpdate("1234567890")).thenReturn(Optional.of(cuenta));
         when(transaccionRepository.findByClaveIdempotencia("tx-key-1")).thenReturn(Optional.empty());
-        when(transaccionRepository.existeOperacionDuplicadaReciente(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        when(transaccionRepository.existeOperacionDuplicadaReciente(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(false);
         when(transaccionRepository.existsByUpc(anyString())).thenReturn(false);
         when(transaccionRepository.save(any(TransaccionServicio.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -113,6 +110,7 @@ class TransaccionPersistenceServiceTest {
         when(cuentaRepository.findByNumeroCuentaForUpdate("1234567890")).thenReturn(Optional.of(cuenta));
         when(transaccionRepository.findByClaveIdempotencia("tx-key-2")).thenReturn(Optional.empty());
 
+        BigDecimal monto = new BigDecimal("100.00");
         assertThrows(SaldoInsuficienteException.class, () ->
                 persistenceService.reservarYDebitarSaldo(
                         1,
@@ -121,7 +119,7 @@ class TransaccionPersistenceServiceTest {
                         producto,
                         2284,
                         14302,
-                        new BigDecimal("100.00"),
+                        monto,
                         "5512345678",
                         null
                 ));
@@ -136,6 +134,7 @@ class TransaccionPersistenceServiceTest {
         cuenta.setEstatus(EstatusCuenta.INACTIVA);
         when(cuentaRepository.findByNumeroCuentaForUpdate("1234567890")).thenReturn(Optional.of(cuenta));
 
+        BigDecimal monto = new BigDecimal("100.00");
         assertThrows(CuentaNoOperativaException.class, () ->
                 persistenceService.reservarYDebitarSaldo(
                         1,
@@ -144,7 +143,7 @@ class TransaccionPersistenceServiceTest {
                         producto,
                         2284,
                         14302,
-                        new BigDecimal("100.00"),
+                        monto,
                         "5512345678",
                         null
                 ));
@@ -155,9 +154,10 @@ class TransaccionPersistenceServiceTest {
     void reservarYDebitarSaldo_operacionDuplicadaReciente() {
         when(cuentaRepository.findByNumeroCuentaForUpdate("1234567890")).thenReturn(Optional.of(cuenta));
         when(transaccionRepository.findByClaveIdempotencia("tx-key-4")).thenReturn(Optional.empty());
-        when(transaccionRepository.existeOperacionDuplicadaReciente(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        when(transaccionRepository.existeOperacionDuplicadaReciente(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(true);
 
+        BigDecimal monto = new BigDecimal("100.00");
         assertThrows(DuplicateResourceException.class, () ->
                 persistenceService.reservarYDebitarSaldo(
                         1,
@@ -166,7 +166,7 @@ class TransaccionPersistenceServiceTest {
                         producto,
                         2284,
                         14302,
-                        new BigDecimal("100.00"),
+                        monto,
                         "5512345678",
                         null
                 ));

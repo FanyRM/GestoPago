@@ -26,7 +26,7 @@ public class SendTxRequest {
 
     @NotBlank(message = "El numero de cuenta es obligatorio")
     @Size(min = 10, max = 20, message = "El numero de cuenta debe tener entre 10 y 20 digitos")
-    @Pattern(regexp = "^[0-9]{10,20}$", message = "El numero de cuenta solo debe contener digitos numericos")
+    @Pattern(regexp = "^\\d{10,20}$", message = "El numero de cuenta solo debe contener digitos numericos")
     @Schema(description = "Numero de cuenta activa del cliente desde la cual se descontara el monto", example = "1234567890")
     private String numeroCuenta;
 
@@ -46,7 +46,7 @@ public class SendTxRequest {
     @Schema(description = "Monto de la operacion en MXN", example = "100.00")
     private BigDecimal montoPago;
 
-    @Pattern(regexp = "^[0-9]{10,15}$", message = "El telefono debe contener entre 10 y 15 digitos numericos")
+    @Pattern(regexp = "^\\d{10,15}$", message = "El telefono debe contener entre 10 y 15 digitos numericos")
     @Schema(description = "Numero telefonico destino (obligatorio en recargas de tiempo aire)", example = "5512345678")
     private String telefono;
 

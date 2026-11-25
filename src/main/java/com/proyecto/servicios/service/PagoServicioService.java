@@ -1,10 +1,11 @@
 package com.proyecto.servicios.service;
 
 import com.proyecto.servicios.entity.gestopago.EstatusTransaccion;
+import com.proyecto.servicios.model.PageResponse;
 import com.proyecto.servicios.model.gestopago.sendtx.HistorialCompraResponse;
 import com.proyecto.servicios.model.gestopago.sendtx.PagoServicioResponse;
 import com.proyecto.servicios.model.gestopago.sendtx.SendTxRequest;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 
@@ -18,13 +19,10 @@ public interface PagoServicioService {
 
     void ejecutarJobConciliacionPendientes();
 
-    Page<HistorialCompraResponse> obtenerHistorialCompras(
+    PageResponse<HistorialCompraResponse> obtenerHistorialCompras(
             LocalDate fechaInicio,
             LocalDate fechaFin,
             String numeroCuenta,
             EstatusTransaccion estatus,
-            int page,
-            int size,
-            String sortBy,
-            String sortDir);
+            Pageable pageable);
 }

@@ -3,7 +3,7 @@ package com.proyecto.servicios.service.Impl;
 import com.proyecto.servicios.entity.gestopago.EstatusTransaccion;
 import com.proyecto.servicios.entity.gestopago.TransaccionServicio;
 import com.proyecto.servicios.entity.sf.Cuenta;
-import com.proyecto.servicios.enums.EstatusCuenta;
+import com.proyecto.servicios.entity.cuentas.EstatusCuenta;
 import com.proyecto.servicios.exception.CuentaNoOperativaException;
 import com.proyecto.servicios.exception.DuplicateResourceException;
 import com.proyecto.servicios.exception.ReglaNegocioException;
@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
@@ -31,6 +32,7 @@ import java.util.Optional;
 @Slf4j
 public class TransaccionPersistenceService {
 
+    private static final String MSG_TX_NO_ENCONTRADA = "Transaccion no encontrada: ";
     private static final DateTimeFormatter HORA_LOCAL_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final CuentaRepository cuentaRepository;
@@ -57,6 +59,7 @@ public class TransaccionPersistenceService {
      * estatus activo, no duplicidad y saldo suficiente, descuenta el monto preventivamente
      * y registra la transaccion en EN_PROCESO liberando la conexion y lock antes del llamado HTTP.
      */
+    @SuppressWarnings("java:S107")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public TransaccionServicio reservarYDebitarSaldo(
             Integer clienteAutenticadoId,
@@ -98,7 +101,7 @@ public class TransaccionPersistenceService {
                     "Ya existe una solicitud registrada con la misma clave de idempotencia.");
         }
 
-        LocalDateTime ventanaDesde = LocalDateTime.now().minusSeconds(Math.max(1L, duplicateWindowSeconds));
+        LocalDateTime ventanaDesde = LocalDateTime.now(ZoneId.systemDefault()).minusSeconds(Math.max(1L, duplicateWindowSeconds));
         boolean duplicadaReciente = transaccionRepository.existeOperacionDuplicadaReciente(
                 cuenta.getId(),
                 idServicio,
@@ -106,8 +109,6 @@ public class TransaccionPersistenceService {
                 monto,
                 telefono != null ? telefono : "",
                 referencia != null ? referencia : "",
-                List.of(EstatusTransaccion.EN_PROCESO, EstatusTransaccion.PENDIENTE_CONCILIACION),
-                EstatusTransaccion.EXITOSA,
                 ventanaDesde
         );
 
@@ -128,7 +129,7 @@ public class TransaccionPersistenceService {
         cuentaRepository.save(cuenta);
 
         String upc = generarUpcUnico();
-        String horaLocal = LocalDateTime.now().format(HORA_LOCAL_FMT);
+        String horaLocal = LocalDateTime.now(ZoneId.systemDefault()).format(HORA_LOCAL_FMT);
 
         TransaccionServicio tx = new TransaccionServicio();
         tx.setCuenta(cuenta);
@@ -158,7 +159,7 @@ public class TransaccionPersistenceService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public TransaccionServicio confirmarExito(Long transaccionId, GestoPagoTxResult resultado) {
         TransaccionServicio tx = transaccionRepository.findById(transaccionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Transaccion no encontrada: " + transaccionId));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_TX_NO_ENCONTRADA + transaccionId));
 
         if (tx.getEstatus() == EstatusTransaccion.EXITOSA) {
             return tx;
@@ -184,7 +185,7 @@ public class TransaccionPersistenceService {
             String mensajeProveedor) {
 
         TransaccionServicio tx = transaccionRepository.findById(transaccionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Transaccion no encontrada: " + transaccionId));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_TX_NO_ENCONTRADA + transaccionId));
 
         if (tx.getEstatus() == EstatusTransaccion.RECHAZADA
                 || tx.getEstatus() == EstatusTransaccion.REVERSADA
@@ -218,7 +219,7 @@ public class TransaccionPersistenceService {
             boolean incrementarIntento) {
 
         TransaccionServicio tx = transaccionRepository.findById(transaccionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Transaccion no encontrada: " + transaccionId));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_TX_NO_ENCONTRADA + transaccionId));
 
         if (tx.getEstatus() == EstatusTransaccion.EXITOSA
                 || tx.getEstatus() == EstatusTransaccion.RECHAZADA

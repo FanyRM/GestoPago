@@ -12,7 +12,11 @@ public interface IClienteService {
 
     Page<ClienteResponse> consultarClientes(ClienteConsultaRequest request);
 
+    ClienteResponse consultarPorId(Integer id);
+
     ClienteResponse actualizarCliente(ClienteActualizaRequest request);
 
     void desactivarCliente(Integer id);
+
+    ClienteResponse obtenerMiPerfil();
 }

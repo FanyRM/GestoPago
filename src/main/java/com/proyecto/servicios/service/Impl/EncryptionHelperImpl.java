@@ -29,7 +29,7 @@ public class EncryptionHelperImpl implements EncryptionHelper {
         if (data == null) {
             return null;
         }
-        String plain = data instanceof String ? (String) data : toJson(data);
+        String plain = data instanceof String str ? str : toJson(data);
         String result = AesEncryption.cipher("ENCRYPT", plain, iv, key);
         if (result == null) {
             throw new IllegalStateException("No fue posible cifrar la informacion de forma segura");

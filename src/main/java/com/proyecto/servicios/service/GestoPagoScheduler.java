@@ -1,6 +1,5 @@
 package com.proyecto.servicios.service;
 
-import com.proyecto.servicios.service.CatalogoProductoService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.scheduling.annotation.Scheduled;

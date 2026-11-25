@@ -1,6 +1,7 @@
 package com.proyecto.servicios.model;
 
 import com.proyecto.servicios.enums.EstatusCuenta;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 public class CuentaResponse extends GenericResponse {
     private Integer id;
     private String numeroCuenta;

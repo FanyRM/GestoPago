@@ -17,6 +17,7 @@ public class GenericResponse<T> {
     private String estatus;
     private String mensaje;
     private T data;
+    private Object errores;
 
     public static <T> GenericResponse<T> exito(T data, String mensaje) {
         return GenericResponse.<T>builder()
@@ -49,6 +50,7 @@ public class GenericResponse<T> {
                 .estatus("ERROR")
                 .mensaje(mensaje)
                 .data(data)
+                .errores(data)
                 .build();
     }
 }

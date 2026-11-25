@@ -81,6 +81,12 @@ class ClienteControllerTest {
                 .rfc("HELC900510AB1")
                 .numeroCuentaAsignada("CTA1234567")
                 .activo(true)
+                .idPais(1)
+                .pais("México")
+                .codigoIsoPais("MEX")
+                .ladaPais("52")
+                .idNacionalidad(1)
+                .nacionalidad("Mexicana")
                 .build();
 
         when(clienteService.registrarCliente(any(ClienteRequest.class))).thenReturn(response);
@@ -92,7 +98,10 @@ class ClienteControllerTest {
                 .andExpect(jsonPath("$.codigo").value(200))
                 .andExpect(jsonPath("$.estatus").value("EXITO"))
                 .andExpect(jsonPath("$.data.id").value(1))
-                .andExpect(jsonPath("$.data.numeroCuentaAsignada").value("CTA1234567"));
+                .andExpect(jsonPath("$.data.numeroCuentaAsignada").value("CTA1234567"))
+                .andExpect(jsonPath("$.data.pais").value("México"))
+                .andExpect(jsonPath("$.data.ladaPais").value("52"))
+                .andExpect(jsonPath("$.data.nacionalidad").value("Mexicana"));
     }
 
     @Test
@@ -238,5 +247,196 @@ class ClienteControllerTest {
                 .andExpect(jsonPath("$.codigo").value(404))
                 .andExpect(jsonPath("$.estatus").value("ERROR"))
                 .andExpect(jsonPath("$.mensaje").value("No se puede actualizar. Cliente no encontrado con ID: 99999"));
+    }
+
+    @Test
+    @DisplayName("GET /clientes/{id} - Consulta por ID devuelve 200 OK con información descriptiva de país y nacionalidad")
+    void consultarPorId_exitoso() throws Exception {
+        ClienteResponse response = ClienteResponse.builder()
+                .id(1)
+                .nombre("Carlos")
+                .curp("HELC900510HMCRSN01")
+                .idPais(1)
+                .pais("México")
+                .codigoIsoPais("MEX")
+                .ladaPais("52")
+                .idNacionalidad(1)
+                .nacionalidad("Mexicana")
+                .idEstadoCivil(1)
+                .estadoCivil("Soltero(a)")
+                .idOcupacion(1)
+                .ocupacion("Empleado")
+                .build();
+
+        when(clienteService.consultarPorId(1)).thenReturn(response);
+
+        mockMvc.perform(get("/clientes/1")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.codigo").value(200))
+                .andExpect(jsonPath("$.estatus").value("EXITO"))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.idPais").value(1))
+                .andExpect(jsonPath("$.data.pais").value("México"))
+                .andExpect(jsonPath("$.data.codigoIsoPais").value("MEX"))
+                .andExpect(jsonPath("$.data.ladaPais").value("52"))
+                .andExpect(jsonPath("$.data.idNacionalidad").value(1))
+                .andExpect(jsonPath("$.data.nacionalidad").value("Mexicana"))
+                .andExpect(jsonPath("$.data.estadoCivil").value("Soltero(a)"))
+                .andExpect(jsonPath("$.data.ocupacion").value("Empleado"));
+    }
+
+    @Test
+    @DisplayName("GET /clientes/{id} - Cliente inexistente devuelve 404 Not Found")
+    void consultarPorId_inexistente() throws Exception {
+        when(clienteService.consultarPorId(999))
+                .thenThrow(new ClienteNoEncontradoException("Cliente no encontrado con ID: 999"));
+
+        mockMvc.perform(get("/clientes/999")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.codigo").value(404))
+                .andExpect(jsonPath("$.estatus").value("ERROR"))
+                .andExpect(jsonPath("$.mensaje").value("Cliente no encontrado con ID: 999"));
+    }
+
+    @Test
+    @DisplayName("POST /clientes - Lada móvil de 1 dígito es válida")
+    void registrarCliente_ladaUnDigito_valida() throws Exception {
+        ClienteRequest request = new ClienteRequest();
+        request.setNombre("Carlos");
+        request.setApellidoPaterno("Hernández");
+        request.setApellidoMaterno("López");
+        request.setFechaNacimiento(LocalDate.of(1990, 5, 10));
+        request.setPassword("Segura123#");
+        request.setCurp("HELC900510HMCRSN01");
+        request.setRfc("HELC900510AB1");
+        request.setSexo('H');
+        request.setIdNacionalidad(1);
+        request.setIdEstadoCivil(1);
+        request.setCorreoElectronico("carlos1@mail.com");
+        request.setLadaMovil(1); // 1 dígito numérico (ej. USA/Canadá)
+        request.setTelefonoMovil("1234567890");
+        request.setIdOcupacion(1);
+        request.setIngresoMensual(new BigDecimal("25000.00"));
+        request.setCalle("Av. Reforma");
+        request.setNumeroExterior("100");
+        request.setColonia("Juárez");
+        request.setMunicipio("Cuauhtémoc");
+        request.setEstado("CDMX");
+        request.setCodigoPostal("06600");
+        request.setIdPais(1);
+
+        ClienteResponse response = ClienteResponse.builder()
+                .id(1)
+                .ladaMovil(1)
+                .build();
+
+        when(clienteService.registrarCliente(any(ClienteRequest.class))).thenReturn(response);
+
+        mockMvc.perform(post("/clientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.codigo").value(200))
+                .andExpect(jsonPath("$.estatus").value("EXITO"))
+                .andExpect(jsonPath("$.data.ladaMovil").value(1));
+    }
+
+    @Test
+    @DisplayName("POST /clientes - Lada móvil de más de 3 dígitos devuelve 400 Bad Request")
+    void registrarCliente_ladaCuatroDigitos_invalida() throws Exception {
+        ClienteRequest request = new ClienteRequest();
+        request.setNombre("Carlos");
+        request.setApellidoPaterno("Hernández");
+        request.setApellidoMaterno("López");
+        request.setFechaNacimiento(LocalDate.of(1990, 5, 10));
+        request.setPassword("Segura123#");
+        request.setCurp("HELC900510HMCRSN01");
+        request.setRfc("HELC900510AB1");
+        request.setSexo('H');
+        request.setIdNacionalidad(1);
+        request.setIdEstadoCivil(1);
+        request.setCorreoElectronico("carlos1@mail.com");
+        request.setLadaMovil(1234); // Inválido: más de 3 dígitos
+        request.setTelefonoMovil("1234567890");
+        request.setIdOcupacion(1);
+        request.setIngresoMensual(new BigDecimal("25000.00"));
+        request.setCalle("Av. Reforma");
+        request.setNumeroExterior("100");
+        request.setColonia("Juárez");
+        request.setMunicipio("Cuauhtémoc");
+        request.setEstado("CDMX");
+        request.setCodigoPostal("06600");
+        request.setIdPais(1);
+
+        mockMvc.perform(post("/clientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value(400))
+                .andExpect(jsonPath("$.estatus").value("ERROR"))
+                .andExpect(jsonPath("$.data.ladaMovil").exists());
+
+        verify(clienteService, never()).registrarCliente(any());
+    }
+
+    @Test
+    @DisplayName("POST /clientes - País con caracteres no permitidos devuelve 400 Bad Request por regex")
+    void registrarCliente_paisInvalido_devuelve400() throws Exception {
+        ClienteRequest request = new ClienteRequest();
+        request.setNombre("Carlos");
+        request.setApellidoPaterno("Hernández");
+        request.setApellidoMaterno("López");
+        request.setFechaNacimiento(LocalDate.of(1990, 5, 10));
+        request.setPassword("Segura123#");
+        request.setCurp("HELC900510HMCRSN01");
+        request.setRfc("HELC900510AB1");
+        request.setSexo('H');
+        request.setIdNacionalidad(1);
+        request.setIdEstadoCivil(1);
+        request.setCorreoElectronico("carlos1@mail.com");
+        request.setLadaMovil(52);
+        request.setTelefonoMovil("1234567890");
+        request.setIdOcupacion(1);
+        request.setIngresoMensual(new BigDecimal("25000.00"));
+        request.setCalle("Av. Reforma");
+        request.setNumeroExterior("100");
+        request.setColonia("Juárez");
+        request.setMunicipio("Cuauhtémoc");
+        request.setEstado("CDMX");
+        request.setCodigoPostal("06600");
+        request.setIdPais(1);
+        request.setPais("Pais123#"); // Inválido por regex
+
+        mockMvc.perform(post("/clientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value(400))
+                .andExpect(jsonPath("$.estatus").value("ERROR"))
+                .andExpect(jsonPath("$.data.pais").value("El país solo debe contener letras y espacios"));
+
+        verify(clienteService, never()).registrarCliente(any());
+    }
+
+    @Test
+    @DisplayName("GET /clientes/mi-perfil retorna perfil del cliente autenticado (200 OK)")
+    void obtenerMiPerfil_retorna200() throws Exception {
+        ClienteResponse resp = new ClienteResponse();
+        resp.setId(1);
+        resp.setNombre("Carlos");
+        resp.setApellidoPaterno("Hernández");
+        resp.setCorreoElectronico("carlos@mail.com");
+
+        when(clienteService.obtenerMiPerfil()).thenReturn(resp);
+
+        mockMvc.perform(get("/clientes/mi-perfil"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.codigo").value(200))
+                .andExpect(jsonPath("$.data.nombre").value("Carlos"))
+                .andExpect(jsonPath("$.data.correoElectronico").value("carlos@mail.com"));
+
+        verify(clienteService).obtenerMiPerfil();
     }
 }

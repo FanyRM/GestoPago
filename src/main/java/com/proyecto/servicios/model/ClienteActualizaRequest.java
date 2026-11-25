@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 @Data
 @Builder
@@ -52,6 +53,10 @@ public class ClienteActualizaRequest {
     @Positive(message = "El ID de la nacionalidad debe ser un número positivo")
     private Integer idNacionalidad;
 
+    @Size(min = 3, max = 100, message = "La nacionalidad debe tener entre 3 y 100 caracteres")
+    @Pattern(regexp = "^([a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+)?$", message = "La nacionalidad solo debe contener letras y espacios")
+    private String nacionalidad;
+
     @Positive(message = "El ID del estado civil debe ser un número positivo")
     private Integer idEstadoCivil;
 
@@ -60,15 +65,17 @@ public class ClienteActualizaRequest {
     @Size(max = 100, message = "El correo electrónico debe tener máximo 100 caracteres")
     private String correoElectronico;
 
-    @Min(value = 100, message = "La lada móvil debe tener al menos 3 dígitos")
-    @Max(value = 999, message = "La lada móvil debe tener máximo 3 dígitos")
+    @Min(value = 1, message = "La lada móvil debe tener al menos 1 dígito numérico")
+    @Max(value = 999, message = "La lada móvil debe tener como máximo 3 dígitos numéricos")
+    @Digits(integer = 3, fraction = 0, message = "La lada móvil debe ser un valor numérico de máximo 3 dígitos")
     private Integer ladaMovil;
 
     @Pattern(regexp = "^(\\d{10})?$", message = "El teléfono móvil debe contener exactamente 10 dígitos")
     private String telefonoMovil;
 
-    @Min(value = 100, message = "La lada alternativa debe tener al menos 3 dígitos si se proporciona")
-    @Max(value = 999, message = "La lada alternativa debe tener máximo 3 dígitos si se proporciona")
+    @Min(value = 1, message = "La lada alternativa debe tener al menos 1 dígito numérico si se proporciona")
+    @Max(value = 999, message = "La lada alternativa debe tener como máximo 3 dígitos numéricos si se proporciona")
+    @Digits(integer = 3, fraction = 0, message = "La lada alternativa debe ser un valor numérico de máximo 3 dígitos")
     private Integer ladaAlternativo;
 
     @Pattern(regexp = "^(\\d{10})?$", message = "El teléfono alternativo debe contener exactamente 10 dígitos si se proporciona")
@@ -110,6 +117,10 @@ public class ClienteActualizaRequest {
     @Positive(message = "El ID del país debe ser un número positivo")
     private Integer idPais;
 
+    @Size(min = 3, max = 100, message = "El país debe tener entre 3 y 100 caracteres")
+    @Pattern(regexp = "^([a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+)?$", message = "El país solo debe contener letras y espacios")
+    private String pais;
+
     @AssertTrue(message = "El sexo debe ser 'H' (Hombre), 'M' (Mujer) o 'O' (Otro)")
     public boolean isSexoValido() {
         if (sexo == null) {
@@ -123,7 +134,7 @@ public class ClienteActualizaRequest {
         if (fechaNacimiento == null) {
             return true;
         }
-        return fechaNacimiento.plusYears(18).isBefore(LocalDate.now())
-                || fechaNacimiento.plusYears(18).isEqual(LocalDate.now());
+        LocalDate hoy = LocalDate.now(ZoneId.systemDefault());
+        return !fechaNacimiento.plusYears(18).isAfter(hoy);
     }
 }

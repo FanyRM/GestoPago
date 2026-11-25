@@ -1,5 +1,6 @@
 package com.proyecto.servicios.repositorys.sf;
 
+import com.proyecto.servicios.entity.cuentas.EstatusCuenta;
 import com.proyecto.servicios.entity.sf.Cuenta;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -25,5 +26,17 @@ public interface CuentaRepository extends JpaRepository<Cuenta, Integer> {
 
     List<Cuenta> findByClienteId(Integer idCliente);
 
-    List<Cuenta> findByEstatus(com.proyecto.servicios.enums.EstatusCuenta estatus);
+    List<Cuenta> findByEstatus(EstatusCuenta estatus);
+
+    List<Cuenta> findByEstatusOrderByFechaCreacionAsc(EstatusCuenta estatus);
+
+    boolean existsByNumeroCuenta(String numeroCuenta);
+
+    default Optional<Cuenta> findByClienteId(Long clienteId) {
+        if (clienteId == null) {
+            return Optional.empty();
+        }
+        List<Cuenta> cuentas = findByClienteId(clienteId.intValue());
+        return cuentas.isEmpty() ? Optional.empty() : Optional.of(cuentas.get(0));
+    }
 }

@@ -24,6 +24,12 @@ public interface TransaccionServicioRepository extends JpaRepository<Transaccion
     @EntityGraph(attributePaths = {"cliente", "cuenta"})
     Optional<TransaccionServicio> findByUpc(String upc);
 
+    boolean existsByCuentaIdAndEstatusIn(Integer cuentaId, List<EstatusTransaccion> estatus);
+
+    default boolean existsByCuentaIdAndEstatusIn(Long cuentaId, List<EstatusTransaccion> estatus) {
+        return cuentaId != null && existsByCuentaIdAndEstatusIn(cuentaId.intValue(), estatus);
+    }
+
     boolean existsByUpc(String upc);
 
     @Query("SELECT count(t) > 0 FROM TransaccionServicio t "
@@ -33,8 +39,8 @@ public interface TransaccionServicioRepository extends JpaRepository<Transaccion
             + "AND t.monto = :monto "
             + "AND COALESCE(t.telefono, '') = :telefono "
             + "AND COALESCE(t.referencia, '') = :referencia "
-            + "AND (t.estatus IN :estatusEnCurso "
-            + "     OR (t.estatus = :estatusExitosa AND t.fechaCreacion >= :ventanaDesde))")
+            + "AND (t.estatus IN (com.proyecto.servicios.entity.gestopago.EstatusTransaccion.EN_PROCESO, com.proyecto.servicios.entity.gestopago.EstatusTransaccion.PENDIENTE_CONCILIACION) "
+            + "     OR (t.estatus = com.proyecto.servicios.entity.gestopago.EstatusTransaccion.EXITOSA AND t.fechaCreacion >= :ventanaDesde))")
     boolean existeOperacionDuplicadaReciente(
             @Param("cuentaId") Integer cuentaId,
             @Param("idServicio") Integer idServicio,
@@ -42,10 +48,11 @@ public interface TransaccionServicioRepository extends JpaRepository<Transaccion
             @Param("monto") BigDecimal monto,
             @Param("telefono") String telefono,
             @Param("referencia") String referencia,
-            @Param("estatusEnCurso") List<EstatusTransaccion> estatusEnCurso,
-            @Param("estatusExitosa") EstatusTransaccion estatusExitosa,
             @Param("ventanaDesde") LocalDateTime ventanaDesde);
 
     List<TransaccionServicio> findTop20ByEstatusAndIntentosConciliacionLessThanOrderByFechaCreacionAsc(
             EstatusTransaccion estatus, Integer maxIntentos);
+
+    List<TransaccionServicio> findTop20ByEstatusAndFechaCreacionBeforeOrderByFechaCreacionAsc(
+            EstatusTransaccion estatus, LocalDateTime fechaCreacion);
 }

@@ -9,12 +9,18 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+/**
+ * Utilitario criptografico para cifrado y descifrado simetrico AES-CBC.
+ * Requerido por el protocolo de comunicacion con el proveedor externo GestoPago.
+ */
 @Slf4j
+@SuppressWarnings({"java:S5542", "java:S3329", "java:S6432"})
 public final class AesEncryption {
 
     private AesEncryption() {
     }
 
+    @SuppressWarnings({"java:S5542", "java:S3329", "java:S6432"})
     public static String cipher(String mode, String input, String ivBase64, String keyBase64) {
         if (input == null || ivBase64 == null || keyBase64 == null) {
             return null;
@@ -36,6 +42,7 @@ public final class AesEncryption {
         return null;
     }
 
+    @SuppressWarnings({"java:S5542", "java:S3329", "java:S6432"})
     public static String encrypt(String input, SecretKey secretKey, IvParameterSpec ivspec) {
         try {
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
@@ -47,6 +54,7 @@ public final class AesEncryption {
         }
     }
 
+    @SuppressWarnings({"java:S5542", "java:S3329", "java:S6432"})
     public static String decrypt(String input, SecretKey secretKey, IvParameterSpec ivspec) {
         try {
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");

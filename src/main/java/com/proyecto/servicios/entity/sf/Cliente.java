@@ -1,7 +1,7 @@
 package com.proyecto.servicios.entity.sf;
 
 import com.proyecto.servicios.entity.catalogo.CatalogoEstadoCivil;
-import com.proyecto.servicios.entity.catalogo.CatalogoNacionalidad;
+import com.proyecto.servicios.entity.catalogo.CatalogoPais;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -47,7 +47,7 @@ public class Cliente {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_nacionalidad", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_cliente_nacionalidad"))
-    private CatalogoNacionalidad nacionalidad;
+    private CatalogoPais nacionalidad;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_estado_civil", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_cliente_estadocivil"))
@@ -86,6 +86,21 @@ public class Cliente {
     @OneToOne(mappedBy = "cliente", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Cuenta cuenta;
 
+    @OneToOne(mappedBy = "cliente", fetch = FetchType.LAZY)
+    private com.proyecto.servicios.entity.seguridad.Usuario usuario;
+
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
+
+    public boolean isActivo() {
+        return Boolean.TRUE.equals(activo);
+    }
+
+    public String getCorreo() {
+        return this.correoElectronico;
+    }
+
+    public void setCorreo(String correo) {
+        this.correoElectronico = correo;
+    }
 }

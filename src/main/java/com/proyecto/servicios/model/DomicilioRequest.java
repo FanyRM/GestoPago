@@ -45,4 +45,8 @@ public class DomicilioRequest {
 
     @NotNull(message = "El ID del país es obligatorio")
     private Integer idPais;
+
+    @Size(min = 3, max = 100, message = "El país debe tener entre 3 y 100 caracteres")
+    @Pattern(regexp = "^([a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+)?$", message = "El país solo debe contener letras y espacios")
+    private String pais;
 }

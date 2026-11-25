@@ -4,12 +4,13 @@ import com.proyecto.servicios.entity.catalogo.CatalogoEstadoCivil;
 import com.proyecto.servicios.entity.catalogo.CatalogoNacionalidad;
 import com.proyecto.servicios.entity.catalogo.CatalogoOcupacion;
 import com.proyecto.servicios.entity.catalogo.CatalogoPais;
+import com.proyecto.servicios.model.CatalogoPaisRequest;
+import com.proyecto.servicios.model.GenericResponse;
 import com.proyecto.servicios.service.CatalogoService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -17,8 +18,11 @@ import java.util.List;
 @RequestMapping("/api/catalogos")
 public class CatalogoController {
 
-    @Autowired
-    private CatalogoService catalogoService;
+    private final CatalogoService catalogoService;
+
+    public CatalogoController(CatalogoService catalogoService) {
+        this.catalogoService = catalogoService;
+    }
 
     @GetMapping("/estado-civil")
     public ResponseEntity<List<CatalogoEstadoCivil>> getEstadosCiviles() {
@@ -38,5 +42,14 @@ public class CatalogoController {
     @GetMapping("/pais")
     public ResponseEntity<List<CatalogoPais>> getPaises() {
         return ResponseEntity.ok(catalogoService.consultarPaises());
+    }
+
+    @PostMapping("/pais")
+    public ResponseEntity<GenericResponse<CatalogoPais>> registrarPais(
+            @Valid @RequestBody CatalogoPaisRequest request
+    ) {
+        CatalogoPais paisGuardado = catalogoService.registrarPais(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(GenericResponse.exito(paisGuardado, "País registrado exitosamente en el catálogo"));
     }
 }

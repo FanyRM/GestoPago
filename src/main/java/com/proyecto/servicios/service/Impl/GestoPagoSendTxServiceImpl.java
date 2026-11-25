@@ -31,6 +31,7 @@ import java.net.NoRouteToHostException;
 import java.net.UnknownHostException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
 
@@ -38,6 +39,12 @@ import java.util.Set;
 @Slf4j
 @RequiredArgsConstructor
 public class GestoPagoSendTxServiceImpl implements GestoPagoSendTxService {
+
+    private static final String FIELD_CODIGO_UPPER = "CODIGO";
+    private static final String FIELD_CODIGO_LOWER = "codigo";
+    private static final String FIELD_MENSAJE_UPPER = "MENSAJE";
+    private static final String FIELD_MENSAJE_LOWER = "mensaje";
+    private static final String FIELD_SIGNED = "signed";
 
     private static final DateTimeFormatter HORA_LOCAL = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final Set<String> CODIGOS_APROBADOS = Set.of("01", "00", "0");
@@ -127,7 +134,7 @@ public class GestoPagoSendTxServiceImpl implements GestoPagoSendTxService {
 
     private MultiValueMap<String, String> prepararFormularioFirmado(SendTx request) {
         if (request.getHoraLocal() == null || request.getHoraLocal().isBlank()) {
-            request.setHoraLocal(LocalDateTime.now().format(HORA_LOCAL));
+            request.setHoraLocal(LocalDateTime.now(ZoneId.systemDefault()).format(HORA_LOCAL));
         }
         if (request.getUpc() == null || request.getUpc().isBlank()) {
             request.setUpc(generarUpc());
@@ -143,7 +150,7 @@ public class GestoPagoSendTxServiceImpl implements GestoPagoSendTxService {
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("random", String.valueOf(System.currentTimeMillis()));
-        form.add("signed", signedPayload);
+        form.add(FIELD_SIGNED, signedPayload);
         return form;
     }
 
@@ -234,10 +241,10 @@ public class GestoPagoSendTxServiceImpl implements GestoPagoSendTxService {
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document doc = builder.parse(new InputSource(new StringReader(xml)));
 
-            String codigo = extraerTagXml(doc, "CODIGO");
+            String codigo = extraerTagXml(doc, FIELD_CODIGO_UPPER);
             String texto = extraerTagXml(doc, "TEXTO");
             if (texto == null) {
-                texto = extraerTagXml(doc, "MENSAJE");
+                texto = extraerTagXml(doc, FIELD_MENSAJE_UPPER);
             }
             String idTx = extraerTagXml(doc, "ID_TX");
             if (idTx == null) {
@@ -260,23 +267,29 @@ public class GestoPagoSendTxServiceImpl implements GestoPagoSendTxService {
         try {
             JsonNode root = objectMapper.readTree(json);
 
-            if (root.hasNonNull("signed") && !root.has("MENSAJE") && !root.has("codigo") && !root.has("CODIGO")) {
-                String decrypted = encryptionHelper.decryptToString(root.get("signed").asText());
+            if (root.hasNonNull(FIELD_SIGNED) && !root.has(FIELD_MENSAJE_UPPER) && !root.has(FIELD_CODIGO_LOWER) && !root.has(FIELD_CODIGO_UPPER)) {
+                String decrypted = encryptionHelper.decryptToString(root.get(FIELD_SIGNED).asText());
                 if (decrypted != null && !decrypted.isBlank()) {
                     return interpretarRespuestaProveedor(decrypted.trim(), upc);
                 }
             }
 
-            JsonNode nodoMensaje = root.has("MENSAJE") ? root.get("MENSAJE")
-                    : (root.has("mensaje") && root.get("mensaje").isObject() ? root.get("mensaje") : root);
-
-            String codigo = extraerCampoJson(nodoMensaje, "CODIGO", "codigo", "code");
-            if (codigo == null) {
-                codigo = extraerCampoJson(root, "CODIGO", "codigo", "code");
+            JsonNode nodoMensaje;
+            if (root.has(FIELD_MENSAJE_UPPER)) {
+                nodoMensaje = root.get(FIELD_MENSAJE_UPPER);
+            } else if (root.has(FIELD_MENSAJE_LOWER) && root.get(FIELD_MENSAJE_LOWER).isObject()) {
+                nodoMensaje = root.get(FIELD_MENSAJE_LOWER);
+            } else {
+                nodoMensaje = root;
             }
-            String texto = extraerCampoJson(nodoMensaje, "TEXTO", "texto", "mensaje", "message");
-            if (texto == null && root.has("mensaje") && root.get("mensaje").isTextual()) {
-                texto = root.get("mensaje").asText();
+
+            String codigo = extraerCampoJson(nodoMensaje, FIELD_CODIGO_UPPER, FIELD_CODIGO_LOWER, "code");
+            if (codigo == null) {
+                codigo = extraerCampoJson(root, FIELD_CODIGO_UPPER, FIELD_CODIGO_LOWER, "code");
+            }
+            String texto = extraerCampoJson(nodoMensaje, "TEXTO", "texto", FIELD_MENSAJE_LOWER, "message");
+            if (texto == null && root.has(FIELD_MENSAJE_LOWER) && root.get(FIELD_MENSAJE_LOWER).isTextual()) {
+                texto = root.get(FIELD_MENSAJE_LOWER).asText();
             }
             String idTx = extraerCampoJson(root, "ID_TX", "idTx", "transaccionId", "TRANSACCION_ID");
             String numAut = extraerCampoJson(root, "NUM_AUTORIZACION", "numAutorizacion", "autorizacion");
